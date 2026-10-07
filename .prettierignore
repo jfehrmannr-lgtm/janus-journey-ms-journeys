@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.git/
+.husky/_/
+AIChangelog.md
+package-lock.json
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.webp

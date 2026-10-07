@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "nestjs-architecture-principles": {
+      "source": "amirtaherkhani/nestjs-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nestjs-architecture-principles/SKILL.md",
+      "computedHash": "305bcf8903ed97c76541c3ab281a84c48d471c31fcca15e36496ea9f5e9d05f6"
+    },
+    "nestjs-code-audit": {
+      "source": "amirtaherkhani/nestjs-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nestjs-code-audit/SKILL.md",
+      "computedHash": "e717133ad0538151724cbc4d3b1c3355041169625689742d10c7101859ead963"
+    },
+    "nestjs-professional-software-engineering": {
+      "source": "amirtaherkhani/nestjs-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nestjs-professional-software-engineering/SKILL.md",
+      "computedHash": "1f99750be9e786d5bb705ce0873c378bb6b5f49f1e62cd0392a4baa36a8b9b2d"
+    }
+  }
+}

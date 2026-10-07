@@ -1,10 +1,31 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { validateEnvironment } from './config/configuration.js';
+import { FoldersModule } from './modules/folders/folders.module.js';
+import { JourneysModule } from './modules/journeys/journeys.module.js';
+import { TasksModule } from './modules/tasks/tasks.module.js';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({
+      cache: true,
+      isGlobal: true,
+      validate: validateEnvironment,
+    }),
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        dbName: config.getOrThrow<string>('MONGODB_DATABASE_NAME'),
+        serverSelectionTimeoutMS: config.getOrThrow<number>(
+          'MONGODB_SERVER_SELECTION_TIMEOUT_MS',
+        ),
+        uri: config.getOrThrow<string>('MONGODB_URI'),
+      }),
+    }),
+    JourneysModule,
+    FoldersModule,
+    TasksModule,
+  ],
 })
 export class AppModule {}
