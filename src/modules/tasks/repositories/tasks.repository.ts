@@ -9,7 +9,9 @@ import { randomUUID } from 'node:crypto';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
 import { TaskDocument, TaskSchema } from '../schemas/task.schema.js';
-import type { Task } from '../../journeys/types/journey.types.js';
+import type { Task } from '@journeys/types/journey.types.js';
+import type { CollectionResult } from '@common/collection-result.js';
+import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class TasksRepository {
@@ -40,10 +42,21 @@ export class TasksRepository {
     }
   }
 
-  async findAll(): Promise<Task[]> {
-    const documents = await this.taskModel.find().lean<TaskSchema[]>().exec();
+  async findAll(query: PaginationQueryDto): Promise<CollectionResult<Task>> {
+    const [documents, totalRecords] = await Promise.all([
+      this.taskModel
+        .find()
+        .skip((query.page - 1) * query.size)
+        .limit(query.size)
+        .lean<TaskSchema[]>()
+        .exec(),
+      this.taskModel.countDocuments().exec(),
+    ]);
 
-    return documents.map((document) => this.toTask(document));
+    return {
+      items: documents.map((document) => this.toTask(document)),
+      totalRecords,
+    };
   }
 
   async findByUid(uid: string): Promise<Task> {

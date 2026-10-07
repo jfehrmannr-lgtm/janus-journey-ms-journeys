@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import type { TaskState } from '../../journeys/types/journey.types.js';
+import type { TaskState } from '@journeys/types/journey.types.js';
 
 export class TaskResponseDto {
   @ApiProperty()

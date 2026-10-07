@@ -10,6 +10,8 @@ import { CreateJourneyDto } from '../dto/create-journey.dto.js';
 import { UpdateJourneyDto } from '../dto/update-journey.dto.js';
 import { JourneyDocument, JourneySchema } from '../schemas/journey.schema.js';
 import type { Journey } from '../types/journey.types.js';
+import type { CollectionResult } from '@common/collection-result.js';
+import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class JourneysRepository {
@@ -36,13 +38,21 @@ export class JourneysRepository {
     }
   }
 
-  async findAll(): Promise<Journey[]> {
-    const documents = await this.journeyModel
-      .find()
-      .lean<JourneySchema[]>()
-      .exec();
+  async findAll(query: PaginationQueryDto): Promise<CollectionResult<Journey>> {
+    const [documents, totalRecords] = await Promise.all([
+      this.journeyModel
+        .find()
+        .skip((query.page - 1) * query.size)
+        .limit(query.size)
+        .lean<JourneySchema[]>()
+        .exec(),
+      this.journeyModel.countDocuments().exec(),
+    ]);
 
-    return documents.map((document) => this.toJourney(document));
+    return {
+      items: documents.map((document) => this.toJourney(document)),
+      totalRecords,
+    };
   }
 
   async findByUid(uid: string): Promise<Journey> {

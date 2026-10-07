@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FoldersRepository } from '../repositories/folders.repository.js';
-import type { Folder } from '../../journeys/types/journey.types.js';
+import type { Folder } from '@journeys/types/journey.types.js';
+import type { CollectionResult } from '@common/collection-result.js';
+import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class FoldersService {
@@ -12,8 +14,8 @@ export class FoldersService {
     return this.foldersRepository.create(input);
   }
 
-  findAll(): Promise<Folder[]> {
-    return this.foldersRepository.findAll();
+  findAll(query: PaginationQueryDto): Promise<CollectionResult<Folder>> {
+    return this.foldersRepository.findAll(query);
   }
 
   findByUid(uid: string): Promise<Folder> {

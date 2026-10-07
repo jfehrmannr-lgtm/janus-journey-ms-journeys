@@ -1,5 +1,15 @@
 # AI Changelog
 
+## 2026-10-07
+
+### #JANUS-MS-JOURNEYS-0004: Add Bounded Collection Results
+
+**Work**: Plan / Build; Added required pagination and exact persistence-backed collection totals for Journeys, Folders, and Tasks.
+
+- Added shared validated `page`/`size` transport input with a defensive maximum of `200` for all three collection routes.
+- Applied database-level pagination and `countDocuments` in each resource repository and returned the minimal `{ items, totalRecords }` downstream contract.
+- Updated service, Swagger, and MongoDB-backed E2E coverage while keeping direct resource responses and domain UID mappings unchanged.
+
 ## 2026-10-06
 
 ### #JANUS-MS-JOURNEYS-0003: Remove Internal Identity Header Coupling

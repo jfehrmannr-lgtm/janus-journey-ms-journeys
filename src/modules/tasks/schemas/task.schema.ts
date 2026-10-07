@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Schema as MongooseSchema, type HydratedDocument } from 'mongoose';
-import type { TaskState } from '../../journeys/types/journey.types.js';
+import type { TaskState } from '@journeys/types/journey.types.js';
 
 export type TaskDocument = HydratedDocument<TaskSchema>;
 

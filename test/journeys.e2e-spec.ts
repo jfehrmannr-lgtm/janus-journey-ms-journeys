@@ -49,7 +49,9 @@ describe('Journeys API (e2e)', () => {
   });
 
   it('allows requests without an authentication header', async () => {
-    await request(app.getHttpServer()).get('/journeys').expect(200);
+    await request(app.getHttpServer())
+      .get('/journeys?page=1&size=20')
+      .expect(200);
   });
 
   it('creates and reads a Journey, Folder, and Task hierarchy', async () => {
@@ -97,17 +99,29 @@ describe('Journeys API (e2e)', () => {
     });
 
     await request(app.getHttpServer())
-      .get('/journeys')
+      .get('/journeys?page=1&size=20')
       .expect(200)
-      .expect((response) => expect(Array.isArray(response.body)).toBe(true));
+      .expect((response) =>
+        expect(
+          Array.isArray((response.body as { items: unknown[] }).items),
+        ).toBe(true),
+      );
     await request(app.getHttpServer())
-      .get('/folders')
+      .get('/folders?page=1&size=20')
       .expect(200)
-      .expect((response) => expect(Array.isArray(response.body)).toBe(true));
+      .expect((response) =>
+        expect(
+          Array.isArray((response.body as { items: unknown[] }).items),
+        ).toBe(true),
+      );
     await request(app.getHttpServer())
-      .get('/tasks')
+      .get('/tasks?page=1&size=20')
       .expect(200)
-      .expect((response) => expect(Array.isArray(response.body)).toBe(true));
+      .expect((response) =>
+        expect(
+          Array.isArray((response.body as { items: unknown[] }).items),
+        ).toBe(true),
+      );
     await request(app.getHttpServer())
       .get(`/journeys/${journeyUid}`)
       .expect(200);

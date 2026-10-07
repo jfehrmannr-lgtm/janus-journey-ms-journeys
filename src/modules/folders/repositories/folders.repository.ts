@@ -9,7 +9,9 @@ import { randomUUID } from 'node:crypto';
 import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FolderDocument, FolderSchema } from '../schemas/folder.schema.js';
-import type { Folder } from '../../journeys/types/journey.types.js';
+import type { Folder } from '@journeys/types/journey.types.js';
+import type { CollectionResult } from '@common/collection-result.js';
+import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class FoldersRepository {
@@ -37,13 +39,21 @@ export class FoldersRepository {
     }
   }
 
-  async findAll(): Promise<Folder[]> {
-    const documents = await this.folderModel
-      .find()
-      .lean<FolderSchema[]>()
-      .exec();
+  async findAll(query: PaginationQueryDto): Promise<CollectionResult<Folder>> {
+    const [documents, totalRecords] = await Promise.all([
+      this.folderModel
+        .find()
+        .skip((query.page - 1) * query.size)
+        .limit(query.size)
+        .lean<FolderSchema[]>()
+        .exec(),
+      this.folderModel.countDocuments().exec(),
+    ]);
 
-    return documents.map((document) => this.toFolder(document));
+    return {
+      items: documents.map((document) => this.toFolder(document)),
+      totalRecords,
+    };
   }
 
   async findByUid(uid: string): Promise<Folder> {

@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Put,
 } from '@nestjs/common';
 import {
@@ -20,6 +21,7 @@ import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { FolderResponseDto } from '../dto/folder-response.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FoldersService } from '../services/folders.service.js';
+import { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @ApiTags('Folders')
 @Controller('folders')
@@ -34,10 +36,24 @@ export class FoldersController {
   }
 
   @ApiOperation({ summary: 'List Folders' })
-  @ApiResponse({ isArray: true, status: 200, type: FolderResponseDto })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/FolderResponseDto' },
+        },
+        totalRecords: { type: 'integer' },
+      },
+    },
+  })
   @Get()
-  findAll(): Promise<FolderResponseDto[]> {
-    return this.foldersService.findAll();
+  findAll(
+    @Query() query: PaginationQueryDto,
+  ): Promise<{ items: FolderResponseDto[]; totalRecords: number }> {
+    return this.foldersService.findAll(query);
   }
 
   @ApiOperation({ summary: 'Get a Folder by UID' })

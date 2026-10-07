@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Put,
 } from '@nestjs/common';
 import {
@@ -20,6 +21,7 @@ import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { TaskResponseDto } from '../dto/task-response.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
 import { TasksService } from '../services/tasks.service.js';
+import { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @ApiTags('Tasks')
 @Controller('tasks')
@@ -34,10 +36,24 @@ export class TasksController {
   }
 
   @ApiOperation({ summary: 'List Tasks' })
-  @ApiResponse({ isArray: true, status: 200, type: TaskResponseDto })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/TaskResponseDto' },
+        },
+        totalRecords: { type: 'integer' },
+      },
+    },
+  })
   @Get()
-  findAll(): Promise<TaskResponseDto[]> {
-    return this.tasksService.findAll();
+  findAll(
+    @Query() query: PaginationQueryDto,
+  ): Promise<{ items: TaskResponseDto[]; totalRecords: number }> {
+    return this.tasksService.findAll(query);
   }
 
   @ApiOperation({ summary: 'Get a Task by UID' })

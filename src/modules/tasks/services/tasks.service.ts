@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
 import { TasksRepository } from '../repositories/tasks.repository.js';
-import type { Task } from '../../journeys/types/journey.types.js';
+import type { Task } from '@journeys/types/journey.types.js';
+import type { CollectionResult } from '@common/collection-result.js';
+import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class TasksService {
@@ -12,8 +14,8 @@ export class TasksService {
     return this.tasksRepository.create(input);
   }
 
-  findAll(): Promise<Task[]> {
-    return this.tasksRepository.findAll();
+  findAll(query: PaginationQueryDto): Promise<CollectionResult<Task>> {
+    return this.tasksRepository.findAll(query);
   }
 
   findByUid(uid: string): Promise<Task> {

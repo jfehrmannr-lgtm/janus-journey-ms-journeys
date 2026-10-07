@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Put,
 } from '@nestjs/common';
 import {
@@ -20,6 +21,7 @@ import { CreateJourneyDto } from '../dto/create-journey.dto.js';
 import { JourneyResponseDto } from '../dto/journey-response.dto.js';
 import { UpdateJourneyDto } from '../dto/update-journey.dto.js';
 import { JourneysService } from '../services/journeys.service.js';
+import { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @ApiTags('Journeys')
 @Controller('journeys')
@@ -34,10 +36,24 @@ export class JourneysController {
   }
 
   @ApiOperation({ summary: 'List Journeys' })
-  @ApiResponse({ isArray: true, status: 200, type: JourneyResponseDto })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/JourneyResponseDto' },
+        },
+        totalRecords: { type: 'integer' },
+      },
+    },
+  })
   @Get()
-  findAll(): Promise<JourneyResponseDto[]> {
-    return this.journeysService.findAll();
+  findAll(
+    @Query() query: PaginationQueryDto,
+  ): Promise<{ items: JourneyResponseDto[]; totalRecords: number }> {
+    return this.journeysService.findAll(query);
   }
 
   @ApiOperation({ summary: 'Get a Journey by UID' })

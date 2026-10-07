@@ -3,6 +3,8 @@ import { CreateJourneyDto } from '../dto/create-journey.dto.js';
 import { UpdateJourneyDto } from '../dto/update-journey.dto.js';
 import { JourneysRepository } from '../repositories/journeys.repository.js';
 import type { Journey } from '../types/journey.types.js';
+import type { CollectionResult } from '@common/collection-result.js';
+import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class JourneysService {
@@ -12,8 +14,8 @@ export class JourneysService {
     return this.journeysRepository.create(input);
   }
 
-  findAll(): Promise<Journey[]> {
-    return this.journeysRepository.findAll();
+  findAll(query: PaginationQueryDto): Promise<CollectionResult<Journey>> {
+    return this.journeysRepository.findAll(query);
   }
 
   findByUid(uid: string): Promise<Journey> {
