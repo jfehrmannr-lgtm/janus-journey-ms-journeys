@@ -1,11 +1,9 @@
 import { ValidationPipe, INestApplication } from '@nestjs/common';
-import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose, { type Model } from 'mongoose';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
 import request from 'supertest';
 import { setupSwagger } from '../src/config/swagger.config.js';
-import type { FolderDocument } from '../src/modules/folders/schemas/folder.schema.js';
 
 interface ResourceBody {
   uid: string;
@@ -16,10 +14,10 @@ interface ResourceBody {
 
 describe('Journeys API (e2e)', () => {
   let app: INestApplication;
-  let mongo: MongoMemoryServer;
+  let mongo: MongoMemoryReplSet;
 
   beforeAll(async () => {
-    mongo = await MongoMemoryServer.create();
+    mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     process.env.MONGODB_URI = mongo.getUri();
     process.env.MONGODB_DATABASE_NAME = 'janus_journey_test';
     process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS = '5000';
@@ -170,7 +168,7 @@ describe('Journeys API (e2e)', () => {
       .expect(200);
   });
 
-  it('deletes only the requested document and does not cascade', async () => {
+  it('cascades Journey deletion and preserves unrelated resources', async () => {
     const journey = await request(app.getHttpServer())
       .post('/journeys')
       .send({ name: 'Delete test', parentUid: 'user-e2e-delete' })
@@ -180,23 +178,113 @@ describe('Journeys API (e2e)', () => {
       .post('/folders')
       .send({ name: 'Child folder', parentUid: journeyBody.uid })
       .expect(201);
+    const folderBody = folder.body as unknown as ResourceBody;
+    const nestedTask = await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Nested task',
+        parentUid: folderBody.uid,
+        state: 'pending',
+      })
+      .expect(201);
+    const directTask = await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Direct task',
+        parentUid: journeyBody.uid,
+        state: 'pending',
+      })
+      .expect(201);
+    const unrelatedJourney = await request(app.getHttpServer())
+      .post('/journeys')
+      .send({ name: 'Unrelated journey', parentUid: 'user-e2e-other' })
+      .expect(201);
+    const unrelatedFolder = await request(app.getHttpServer())
+      .post('/folders')
+      .send({ name: 'Unrelated folder', parentUid: 'user-e2e-other' })
+      .expect(201);
+    const unrelatedTask = await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Unrelated task',
+        parentUid: (unrelatedFolder.body as unknown as ResourceBody).uid,
+        state: 'pending',
+      })
+      .expect(201);
 
     await request(app.getHttpServer())
       .delete(`/journeys/${journeyBody.uid}`)
       .expect(204);
 
     await request(app.getHttpServer())
-      .get(`/folders/${(folder.body as unknown as ResourceBody).uid}`)
+      .get(`/journeys/${journeyBody.uid}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/folders/${folderBody.uid}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/tasks/${(nestedTask.body as unknown as ResourceBody).uid}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/tasks/${(directTask.body as unknown as ResourceBody).uid}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(
+        `/journeys/${(unrelatedJourney.body as unknown as ResourceBody).uid}`,
+      )
       .expect(200);
+    await request(app.getHttpServer())
+      .get(`/folders/${(unrelatedFolder.body as unknown as ResourceBody).uid}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/tasks/${(unrelatedTask.body as unknown as ResourceBody).uid}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .delete('/journeys/missing-journey')
+      .expect(404);
+  });
 
-    const folderModel = app.get<Model<FolderDocument>>(
-      getModelToken('FolderSchema'),
-    );
-    expect(
-      await folderModel.exists({
-        uid: (folder.body as unknown as ResourceBody).uid,
-      }),
-    ).toBeTruthy();
+  it('cascades Folder deletion and preserves unrelated Tasks', async () => {
+    const folder = await request(app.getHttpServer())
+      .post('/folders')
+      .send({ name: 'Folder to delete', parentUid: 'user-e2e-folder-delete' })
+      .expect(201);
+    const folderUid = (folder.body as unknown as ResourceBody).uid;
+    const childTask = await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Task to delete',
+        parentUid: folderUid,
+        state: 'pending',
+      })
+      .expect(201);
+    const unrelatedTask = await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Task to keep',
+        parentUid: 'user-e2e-folder-delete',
+        state: 'pending',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/folders/${folderUid}`)
+      .expect(204);
+    await request(app.getHttpServer()).get(`/folders/${folderUid}`).expect(404);
+    await request(app.getHttpServer())
+      .get(`/tasks/${(childTask.body as unknown as ResourceBody).uid}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/tasks/${(unrelatedTask.body as unknown as ResourceBody).uid}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .delete('/folders/missing-folder')
+      .expect(404);
   });
 
   it('exposes Swagger documentation without authentication requirements', async () => {
@@ -212,6 +300,7 @@ describe('Journeys API (e2e)', () => {
                 parameters?: Array<{ name: string; in?: string }>;
               };
               put?: unknown;
+              delete?: { description?: string; summary?: string };
             }
           >;
         };
@@ -234,6 +323,16 @@ describe('Journeys API (e2e)', () => {
         ]) {
           expect(document.paths[path]?.put).toBeUndefined();
         }
+
+        expect(document.paths['/journeys/{uid}']?.delete).toMatchObject({
+          summary: 'Delete a Journey and its descendants',
+        });
+        expect(document.paths['/folders/{uid}']?.delete).toMatchObject({
+          summary: 'Delete a Folder and its Tasks',
+        });
+        expect(document.paths['/tasks/{uid}']?.delete).toMatchObject({
+          summary: 'Delete a Task',
+        });
       });
   });
 });

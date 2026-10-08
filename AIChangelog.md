@@ -2,6 +2,27 @@
 
 ## 2026-10-08
 
+### #JANUS-MS-JOURNEYS-0011: Document Deletion Cascades
+
+**Work**: Plan / Build; Updated DELETE operation documentation to describe the transaction-backed cascade behavior implemented for Journeys and Folders and the isolated Task deletion behavior.
+
+- Removed obsolete “without cascading” wording from Journey and Folder Swagger summaries.
+- Documented descendant deletion for Journeys, child Task deletion for Folders, and the lack of child resources for Tasks.
+- Added OpenAPI test assertions for the three DELETE operation summaries while preserving the existing `204` response contracts.
+
+## 2026-10-08
+
+### #JANUS-MS-JOURNEYS-0010: Cascade Internal Resource Deletions
+
+**Work**: Plan / Build; Implemented transaction-backed internal deletion cascades for Journeys and Folders and verified child, unrelated, nonexistent-resource, and failure-path behavior.
+
+- Journey deletion now atomically removes the Journey, its Folders, direct Tasks, and Tasks owned by those Folders.
+- Folder deletion now atomically removes the Folder and its child Tasks; Task deletion remains an isolated operation.
+- Added MongoDB replica-set e2e coverage and repository failure-path tests to ensure failed child deletion prevents parent deletion and closes the session.
+- Preserved existing `204 No Content` success and `404 Not Found` missing-resource contracts without adding cross-service behavior.
+
+## 2026-10-08
+
 ### #JANUS-MS-JOURNEYS-0009: Remove PUT Update Routes
 
 **Work**: Plan / Build; Removed the verified Journey, Folder, and Task PUT routes in accordance with the PATCH-only update contract while preserving the existing PATCH handlers.

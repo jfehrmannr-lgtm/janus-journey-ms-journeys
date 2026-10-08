@@ -74,7 +74,11 @@ export class TasksController {
     return this.tasksService.update(uid, input);
   }
 
-  @ApiOperation({ summary: 'Delete a Task without cascading' })
+  @ApiOperation({
+    summary: 'Delete a Task',
+    description:
+      'Deletes the requested Task. Tasks do not contain child resources, so no additional records are deleted.',
+  })
   @ApiNoContentResponse({ description: 'Task deleted' })
   @ApiNotFoundResponse({ description: 'Task not found' })
   @Delete(':uid')

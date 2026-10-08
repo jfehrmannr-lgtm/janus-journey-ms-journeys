@@ -80,8 +80,14 @@ export class JourneysController {
     return this.journeysService.update(uid, input);
   }
 
-  @ApiOperation({ summary: 'Delete a Journey without cascading' })
-  @ApiNoContentResponse({ description: 'Journey deleted' })
+  @ApiOperation({
+    summary: 'Delete a Journey and its descendants',
+    description:
+      'Deletes the Journey, its direct Folders, direct Tasks, and Tasks belonging to those Folders in one transaction.',
+  })
+  @ApiNoContentResponse({
+    description: 'Journey and all of its Folders and Tasks deleted',
+  })
   @ApiNotFoundResponse({ description: 'Journey not found' })
   @Delete(':uid')
   @HttpCode(204)

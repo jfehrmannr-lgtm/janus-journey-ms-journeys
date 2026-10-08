@@ -74,8 +74,12 @@ export class FoldersController {
     return this.foldersService.update(uid, input);
   }
 
-  @ApiOperation({ summary: 'Delete a Folder without cascading' })
-  @ApiNoContentResponse({ description: 'Folder deleted' })
+  @ApiOperation({
+    summary: 'Delete a Folder and its Tasks',
+    description:
+      'Deletes the Folder and all Tasks belonging to it in one transaction.',
+  })
+  @ApiNoContentResponse({ description: 'Folder and its Tasks deleted' })
   @ApiNotFoundResponse({ description: 'Folder not found' })
   @Delete(':uid')
   @HttpCode(204)

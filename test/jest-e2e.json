@@ -5,6 +5,12 @@
   "testRegex": ".e2e-spec.ts$",
   "extensionsToTreatAsEsm": [".ts"],
   "moduleNameMapper": {
+    "^@common/(.*)\\.js$": "<rootDir>/../src/common/$1",
+    "^@config/(.*)\\.js$": "<rootDir>/../src/config/$1",
+    "^@modules/(.*)\\.js$": "<rootDir>/../src/modules/$1",
+    "^@journeys/(.*)\\.js$": "<rootDir>/../src/modules/journeys/$1",
+    "^@folders/(.*)\\.js$": "<rootDir>/../src/modules/folders/$1",
+    "^@tasks/(.*)\\.js$": "<rootDir>/../src/modules/tasks/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   },
   "transform": {

@@ -3,12 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { type Connection, type Model } from 'mongoose';
 import { randomUUID } from 'node:crypto';
 import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FolderDocument, FolderSchema } from '../schemas/folder.schema.js';
+import { TaskDocument, TaskSchema } from '../../tasks/schemas/task.schema.js';
 import type { Folder } from '@journeys/types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
 import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
@@ -18,6 +19,10 @@ export class FoldersRepository {
   constructor(
     @InjectModel(FolderSchema.name)
     private readonly folderModel: Model<FolderDocument>,
+    @InjectModel(TaskSchema.name)
+    private readonly taskModel: Model<TaskDocument>,
+    @InjectConnection()
+    private readonly connection: Connection,
   ) {}
 
   async create(input: CreateFolderDto): Promise<Folder> {
@@ -103,10 +108,29 @@ export class FoldersRepository {
   }
 
   async remove(uid: string): Promise<void> {
-    const result = await this.folderModel.deleteOne({ uid }).exec();
+    const session = await this.connection.startSession();
 
-    if (result.deletedCount === 0) {
-      throw new NotFoundException(`Folder ${uid} was not found`);
+    try {
+      await session.withTransaction(async () => {
+        const folder = await this.folderModel
+          .findOne({ uid })
+          .session(session)
+          .select({ _id: 1 })
+          .lean()
+          .exec();
+
+        if (!folder) {
+          throw new NotFoundException(`Folder ${uid} was not found`);
+        }
+
+        await this.taskModel
+          .deleteMany({ parentUid: uid })
+          .session(session)
+          .exec();
+        await this.folderModel.deleteOne({ uid }).session(session).exec();
+      });
+    } finally {
+      await session.endSession();
     }
   }
 
