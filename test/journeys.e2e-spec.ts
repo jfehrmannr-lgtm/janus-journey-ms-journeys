@@ -52,6 +52,28 @@ describe('Journeys API (e2e)', () => {
       .expect(200);
   });
 
+  it.each([20, 200, 201, 1000])(
+    'accepts collection size=%i for all resources',
+    async (size) => {
+      for (const resource of ['journeys', 'folders', 'tasks']) {
+        await request(app.getHttpServer())
+          .get(`/${resource}?page=1&size=${size}`)
+          .expect(200);
+      }
+    },
+  );
+
+  it.each(['not-a-number', '0', '-1'])(
+    'rejects invalid collection size=%s for all resources',
+    async (size) => {
+      for (const resource of ['journeys', 'folders', 'tasks']) {
+        await request(app.getHttpServer())
+          .get(`/${resource}?page=1&size=${size}`)
+          .expect(400);
+      }
+    },
+  );
+
   it('creates and reads a Journey, Folder, and Task hierarchy', async () => {
     const journeyResponse = await request(app.getHttpServer())
       .post('/journeys')
@@ -297,7 +319,11 @@ describe('Journeys API (e2e)', () => {
             string,
             {
               get?: {
-                parameters?: Array<{ name: string; in?: string }>;
+                parameters?: Array<{
+                  name: string;
+                  in?: string;
+                  schema?: { maximum?: number };
+                }>;
               };
               put?: unknown;
               delete?: { description?: string; summary?: string };
@@ -314,6 +340,10 @@ describe('Journeys API (e2e)', () => {
             ]),
           );
           expect(parameters).toHaveLength(2);
+          const sizeParameter = parameters.find(
+            (parameter) => parameter.name === 'size',
+          );
+          expect(sizeParameter?.schema?.maximum).toBe(200);
         }
 
         for (const path of [

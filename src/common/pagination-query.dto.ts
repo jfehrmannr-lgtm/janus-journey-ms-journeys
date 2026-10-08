@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsDefined, IsInt, Max, Min } from 'class-validator';
 
 export class PaginationQueryDto {
@@ -27,6 +27,11 @@ export class PaginationQueryDto {
   @IsInt()
   @Min(1)
   @Max(200)
+  @Transform(({ value }: { value: unknown }) => {
+    const numericValue = Number(value);
+
+    return Number.isInteger(numericValue) && numericValue > 200 ? 200 : value;
+  })
   @Type(() => Number)
   size!: number;
 }

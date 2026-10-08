@@ -2,6 +2,16 @@
 
 ## 2026-10-08
 
+### #JANUS-MS-JOURNEYS-0012: Normalize Oversized Collection Pages
+
+**Work**: Plan / Build; Updated the shared collection pagination boundary so valid oversized page sizes are normalized before maximum validation without changing invalid-input handling or repository pagination behavior.
+
+- Normalized positive integer `size` values above `200` to `200` for Journeys, Folders, and Tasks.
+- Preserved rejection of nonnumeric, zero, negative, and otherwise invalid values.
+- Documented the effective maximum of `200` in Swagger and added e2e coverage for accepted and rejected sizes.
+
+## 2026-10-08
+
 ### #JANUS-MS-JOURNEYS-0011: Document Deletion Cascades
 
 **Work**: Plan / Build; Updated DELETE operation documentation to describe the transaction-backed cascade behavior implemented for Journeys and Folders and the isolated Task deletion behavior.
