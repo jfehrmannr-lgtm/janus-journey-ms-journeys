@@ -89,6 +89,7 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(201);
+    const taskUid = (taskResponse.body as unknown as ResourceBody).uid;
 
     expect(taskResponse.body).toMatchObject({
       isVisible: true,
@@ -125,9 +126,17 @@ describe('Journeys API (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/journeys/${journeyUid}`)
       .expect(200);
+    await request(app.getHttpServer())
+      .put(`/folders/${folderUid}`)
+      .send({ name: 'Should not be accepted' })
+      .expect(404);
+    await request(app.getHttpServer())
+      .put(`/tasks/${taskUid}`)
+      .send({ name: 'Should not be accepted' })
+      .expect(404);
   });
 
-  it('supports PUT and PATCH updates without calculating progress', async () => {
+  it('supports PATCH updates without calculating progress', async () => {
     const journeyResponse = await request(app.getHttpServer())
       .post('/journeys')
       .send({ name: 'Initial Journey', parentUid: 'user-e2e-2' })
@@ -135,23 +144,19 @@ describe('Journeys API (e2e)', () => {
     const journeyUid = (journeyResponse.body as unknown as ResourceBody).uid;
 
     await request(app.getHttpServer())
-      .put(`/journeys/${journeyUid}`)
-      .send({ name: 'Replaced Journey' })
-      .expect(200)
-      .expect((response) => {
-        const body = response.body as unknown as ResourceBody;
-        expect(body.name).toBe('Replaced Journey');
-        expect(body.progress).toBeUndefined();
-      });
-
-    await request(app.getHttpServer())
       .patch(`/journeys/${journeyUid}`)
-      .send({ metadata: { reviewed: true } })
+      .send({ metadata: { reviewed: true }, name: 'Updated Journey' })
       .expect(200)
       .expect((response) => {
         const body = response.body as unknown as ResourceBody;
         expect(body.metadata).toEqual({ reviewed: true });
+        expect(body.name).toBe('Updated Journey');
       });
+
+    await request(app.getHttpServer())
+      .put(`/journeys/${journeyUid}`)
+      .send({ name: 'Should not be accepted' })
+      .expect(404);
   });
 
   it('does not apply ownership filtering while authentication is unimplemented', async () => {
@@ -206,6 +211,7 @@ describe('Journeys API (e2e)', () => {
               get?: {
                 parameters?: Array<{ name: string; in?: string }>;
               };
+              put?: unknown;
             }
           >;
         };
@@ -219,6 +225,14 @@ describe('Journeys API (e2e)', () => {
             ]),
           );
           expect(parameters).toHaveLength(2);
+        }
+
+        for (const path of [
+          '/journeys/{uid}',
+          '/folders/{uid}',
+          '/tasks/{uid}',
+        ]) {
+          expect(document.paths[path]?.put).toBeUndefined();
         }
       });
   });

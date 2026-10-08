@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  Put,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -68,17 +67,6 @@ export class JourneysController {
   @Get(':uid')
   findByUid(@Param('uid') uid: string): Promise<JourneyResponseDto> {
     return this.journeysService.findByUid(uid);
-  }
-
-  @ApiOperation({ summary: 'Replace mutable Journey fields' })
-  @ApiNotFoundResponse({ description: 'Journey not found' })
-  @ApiResponse({ status: 200, type: JourneyResponseDto })
-  @Put(':uid')
-  update(
-    @Param('uid') uid: string,
-    @Body() input: UpdateJourneyDto,
-  ): Promise<JourneyResponseDto> {
-    return this.journeysService.update(uid, input);
   }
 
   @ApiOperation({ summary: 'Partially update a Journey' })

@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  Put,
 } from '@nestjs/common';
 import {
   ApiNoContentResponse,
@@ -62,17 +61,6 @@ export class FoldersController {
   @Get(':uid')
   findByUid(@Param('uid') uid: string): Promise<FolderResponseDto> {
     return this.foldersService.findByUid(uid);
-  }
-
-  @ApiOperation({ summary: 'Replace mutable Folder fields' })
-  @ApiNotFoundResponse({ description: 'Folder not found' })
-  @ApiResponse({ status: 200, type: FolderResponseDto })
-  @Put(':uid')
-  update(
-    @Param('uid') uid: string,
-    @Body() input: UpdateFolderDto,
-  ): Promise<FolderResponseDto> {
-    return this.foldersService.update(uid, input);
   }
 
   @ApiOperation({ summary: 'Partially update a Folder' })

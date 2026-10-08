@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  Put,
 } from '@nestjs/common';
 import {
   ApiNoContentResponse,
@@ -62,17 +61,6 @@ export class TasksController {
   @Get(':uid')
   findByUid(@Param('uid') uid: string): Promise<TaskResponseDto> {
     return this.tasksService.findByUid(uid);
-  }
-
-  @ApiOperation({ summary: 'Replace mutable Task fields' })
-  @ApiNotFoundResponse({ description: 'Task not found' })
-  @ApiResponse({ status: 200, type: TaskResponseDto })
-  @Put(':uid')
-  update(
-    @Param('uid') uid: string,
-    @Body() input: UpdateTaskDto,
-  ): Promise<TaskResponseDto> {
-    return this.tasksService.update(uid, input);
   }
 
   @ApiOperation({ summary: 'Partially update a Task' })

@@ -2,6 +2,16 @@
 
 ## 2026-10-08
 
+### #JANUS-MS-JOURNEYS-0009: Remove PUT Update Routes
+
+**Work**: Plan / Build; Removed the verified Journey, Folder, and Task PUT routes in accordance with the PATCH-only update contract while preserving the existing PATCH handlers.
+
+- Removed PUT controller methods and imports for all three resources.
+- Updated e2e coverage to verify Journey PATCH behavior, reject the removed Journey PUT route, and confirm all three PUT routes are absent from generated OpenAPI documentation.
+- Retained the shared update DTOs because they remain required by the PATCH endpoints.
+
+## 2026-10-08
+
 ### #JANUS-MS-JOURNEYS-0008: Document Journey Creation Errors
 
 **Work**: Plan / Build; Traced `POST /journeys` validation and persistence error handling and documented only the HTTP errors implemented within `ms-journeys`.
