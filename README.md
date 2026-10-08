@@ -7,7 +7,7 @@ domain data in MongoDB.
 ## Current scope
 
 - Generic CRUD for Journeys, Folders, and Tasks.
-- Parent relationships are represented by `parentUid`; authentication and authorization are not implemented yet.
+- Parent relationships are represented by `{ uid, type }`; authentication and authorization are not implemented yet.
 - Folder parents may be Users or Journeys.
 - Task parents may be Users, Journeys, or Folders.
 - Unprotected endpoints; authentication and authorization are reserved for a future cross-cutting design.

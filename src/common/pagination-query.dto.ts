@@ -17,6 +17,7 @@ export class PaginationQueryDto {
   page!: number;
 
   @ApiProperty({
+    maximum: 200,
     minimum: 1,
     required: true,
     description: 'Requested page size. Values above 200 are normalized to 200.',

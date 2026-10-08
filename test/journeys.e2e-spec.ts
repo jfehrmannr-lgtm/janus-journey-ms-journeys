@@ -81,7 +81,7 @@ describe('Journeys API (e2e)', () => {
         description: null,
         metadata: { source: 'e2e' },
         name: 'Learn web development',
-        parentUid: 'user-e2e-1',
+        parent: { type: 'user', uid: 'user-e2e-1' },
       })
       .expect(201);
 
@@ -89,14 +89,17 @@ describe('Journeys API (e2e)', () => {
       description: null,
       metadata: { source: 'e2e' },
       name: 'Learn web development',
-      parentUid: 'user-e2e-1',
+      parent: { type: 'user', uid: 'user-e2e-1' },
       type: 'journey',
     });
 
     const journeyUid = (journeyResponse.body as unknown as ResourceBody).uid;
     const folderResponse = await request(app.getHttpServer())
       .post('/folders')
-      .send({ name: 'HTML and CSS', parentUid: journeyUid })
+      .send({
+        name: 'HTML and CSS',
+        parent: { type: 'journey', uid: journeyUid },
+      })
       .expect(201);
     const folderUid = (folderResponse.body as unknown as ResourceBody).uid;
 
@@ -105,7 +108,7 @@ describe('Journeys API (e2e)', () => {
       .send({
         isVisible: true,
         name: 'Understand HTTP',
-        parentUid: folderUid,
+        parent: { type: 'folder', uid: folderUid },
         state: 'pending',
       })
       .expect(201);
@@ -113,7 +116,7 @@ describe('Journeys API (e2e)', () => {
 
     expect(taskResponse.body).toMatchObject({
       isVisible: true,
-      parentUid: folderUid,
+      parent: { type: 'folder', uid: folderUid },
       state: 'pending',
       taskType: null,
       type: 'task',
@@ -159,7 +162,10 @@ describe('Journeys API (e2e)', () => {
   it('supports PATCH updates without calculating progress', async () => {
     const journeyResponse = await request(app.getHttpServer())
       .post('/journeys')
-      .send({ name: 'Initial Journey', parentUid: 'user-e2e-2' })
+      .send({
+        name: 'Initial Journey',
+        parent: { type: 'user', uid: 'user-e2e-2' },
+      })
       .expect(201);
     const journeyUid = (journeyResponse.body as unknown as ResourceBody).uid;
 
@@ -179,10 +185,103 @@ describe('Journeys API (e2e)', () => {
       .expect(404);
   });
 
+  it('validates structured parent types and internal parent existence', async () => {
+    await request(app.getHttpServer())
+      .post('/journeys')
+      .send({
+        name: 'Invalid Journey parent',
+        parent: { type: 'journey', uid: 'journey-parent' },
+      })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/folders')
+      .send({
+        name: 'Invalid Folder parent',
+        parent: { type: 'folder', uid: 'folder-parent' },
+      })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Invalid Task parent',
+        parent: { type: 'task', uid: 'task-parent' },
+        state: 'pending',
+      })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/folders')
+      .send({
+        name: 'Missing Journey parent',
+        parent: { type: 'journey', uid: 'missing-journey-parent' },
+      })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Missing Folder parent',
+        parent: { type: 'folder', uid: 'missing-folder-parent' },
+        state: 'pending',
+      })
+      .expect(404);
+    await request(app.getHttpServer())
+      .post('/journeys')
+      .send({ name: 'Obsolete parent field', parentUid: 'user-legacy' })
+      .expect(400);
+
+    const journey = await request(app.getHttpServer())
+      .post('/journeys')
+      .send({
+        name: 'Parent update target',
+        parent: { type: 'user', uid: 'user-parent-update' },
+      })
+      .expect(201);
+    const journeyUid = (journey.body as unknown as ResourceBody).uid;
+    const folder = await request(app.getHttpServer())
+      .post('/folders')
+      .send({
+        name: 'Parent update folder',
+        parent: { type: 'journey', uid: journeyUid },
+      })
+      .expect(201);
+    const folderUid = (folder.body as unknown as ResourceBody).uid;
+    const task = await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Parent update task',
+        parent: { type: 'folder', uid: folderUid },
+        state: 'pending',
+      })
+      .expect(201);
+    const taskUid = (task.body as unknown as ResourceBody).uid;
+
+    await request(app.getHttpServer())
+      .patch(`/folders/${folderUid}`)
+      .send({ parent: { type: 'folder', uid: folderUid } })
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch(`/folders/${folderUid}`)
+      .send({ parent: { type: 'journey', uid: 'missing-update-journey' } })
+      .expect(404);
+    await request(app.getHttpServer())
+      .patch(`/tasks/${taskUid}`)
+      .send({ parent: { type: 'task', uid: taskUid } })
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch(`/tasks/${taskUid}`)
+      .send({ parent: { type: 'folder', uid: 'missing-update-folder' } })
+      .expect(404);
+  });
+
   it('does not apply ownership filtering while authentication is unimplemented', async () => {
     const response = await request(app.getHttpServer())
       .post('/journeys')
-      .send({ name: 'Unprotected Journey', parentUid: 'user-e2e-owner' })
+      .send({
+        name: 'Unprotected Journey',
+        parent: { type: 'user', uid: 'user-e2e-owner' },
+      })
       .expect(201);
 
     await request(app.getHttpServer())
@@ -193,12 +292,18 @@ describe('Journeys API (e2e)', () => {
   it('cascades Journey deletion and preserves unrelated resources', async () => {
     const journey = await request(app.getHttpServer())
       .post('/journeys')
-      .send({ name: 'Delete test', parentUid: 'user-e2e-delete' })
+      .send({
+        name: 'Delete test',
+        parent: { type: 'user', uid: 'user-e2e-delete' },
+      })
       .expect(201);
     const journeyBody = journey.body as unknown as ResourceBody;
     const folder = await request(app.getHttpServer())
       .post('/folders')
-      .send({ name: 'Child folder', parentUid: journeyBody.uid })
+      .send({
+        name: 'Child folder',
+        parent: { type: 'journey', uid: journeyBody.uid },
+      })
       .expect(201);
     const folderBody = folder.body as unknown as ResourceBody;
     const nestedTask = await request(app.getHttpServer())
@@ -206,7 +311,7 @@ describe('Journeys API (e2e)', () => {
       .send({
         isVisible: true,
         name: 'Nested task',
-        parentUid: folderBody.uid,
+        parent: { type: 'folder', uid: folderBody.uid },
         state: 'pending',
       })
       .expect(201);
@@ -215,24 +320,33 @@ describe('Journeys API (e2e)', () => {
       .send({
         isVisible: true,
         name: 'Direct task',
-        parentUid: journeyBody.uid,
+        parent: { type: 'journey', uid: journeyBody.uid },
         state: 'pending',
       })
       .expect(201);
     const unrelatedJourney = await request(app.getHttpServer())
       .post('/journeys')
-      .send({ name: 'Unrelated journey', parentUid: 'user-e2e-other' })
+      .send({
+        name: 'Unrelated journey',
+        parent: { type: 'user', uid: 'user-e2e-other' },
+      })
       .expect(201);
     const unrelatedFolder = await request(app.getHttpServer())
       .post('/folders')
-      .send({ name: 'Unrelated folder', parentUid: 'user-e2e-other' })
+      .send({
+        name: 'Unrelated folder',
+        parent: { type: 'user', uid: 'user-e2e-other' },
+      })
       .expect(201);
     const unrelatedTask = await request(app.getHttpServer())
       .post('/tasks')
       .send({
         isVisible: true,
         name: 'Unrelated task',
-        parentUid: (unrelatedFolder.body as unknown as ResourceBody).uid,
+        parent: {
+          type: 'folder',
+          uid: (unrelatedFolder.body as unknown as ResourceBody).uid,
+        },
         state: 'pending',
       })
       .expect(201);
@@ -272,7 +386,10 @@ describe('Journeys API (e2e)', () => {
   it('cascades Folder deletion and preserves unrelated Tasks', async () => {
     const folder = await request(app.getHttpServer())
       .post('/folders')
-      .send({ name: 'Folder to delete', parentUid: 'user-e2e-folder-delete' })
+      .send({
+        name: 'Folder to delete',
+        parent: { type: 'user', uid: 'user-e2e-folder-delete' },
+      })
       .expect(201);
     const folderUid = (folder.body as unknown as ResourceBody).uid;
     const childTask = await request(app.getHttpServer())
@@ -280,7 +397,7 @@ describe('Journeys API (e2e)', () => {
       .send({
         isVisible: true,
         name: 'Task to delete',
-        parentUid: folderUid,
+        parent: { type: 'folder', uid: folderUid },
         state: 'pending',
       })
       .expect(201);
@@ -289,7 +406,7 @@ describe('Journeys API (e2e)', () => {
       .send({
         isVisible: true,
         name: 'Task to keep',
-        parentUid: 'user-e2e-folder-delete',
+        parent: { type: 'user', uid: 'user-e2e-folder-delete' },
         state: 'pending',
       })
       .expect(201);
@@ -315,6 +432,9 @@ describe('Journeys API (e2e)', () => {
       .expect(200)
       .expect((response) => {
         const document = response.body as {
+          components: {
+            schemas: Record<string, { properties?: Record<string, unknown> }>;
+          };
           paths: Record<
             string,
             {
@@ -363,6 +483,22 @@ describe('Journeys API (e2e)', () => {
         expect(document.paths['/tasks/{uid}']?.delete).toMatchObject({
           summary: 'Delete a Task',
         });
+
+        for (const schemaName of [
+          'CreateJourneyDto',
+          'UpdateJourneyDto',
+          'JourneyResponseDto',
+          'CreateFolderDto',
+          'UpdateFolderDto',
+          'FolderResponseDto',
+          'CreateTaskDto',
+          'UpdateTaskDto',
+          'TaskResponseDto',
+        ]) {
+          const properties = document.components.schemas[schemaName].properties;
+          expect(properties?.parent).toBeDefined();
+          expect(properties?.parentUid).toBeUndefined();
+        }
       });
   });
 });

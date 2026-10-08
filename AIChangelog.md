@@ -2,6 +2,18 @@
 
 ## 2026-10-08
 
+### #JANUS-MS-JOURNEYS-0013: Use Typed Parent References
+
+**Work**: Plan / Build; Replaced active `parentUid` transport, domain, persistence, and serialization fields with structured `{ uid, type }` parent references while preserving the ms-journeys boundary and internal cascade behavior.
+
+- Added shared parent DTO, type, and Mongoose subdocument definitions.
+- Enforced resource-specific parent types: Journey → User; Folder → User or Journey; Task → User, Journey, or Folder.
+- Added local existence checks for internal Journey and Folder parents with `404` responses; User validation remains outside this service and is intentionally not implemented.
+- Updated indexes, repository queries, update paths, cascade predicates, response DTOs, Swagger schemas, README documentation, and tests.
+- Confirmed obsolete `parentUid` requests are rejected. Existing legacy database documents require a separately planned migration because arbitrary legacy IDs cannot safely recover parent types, especially User versus internal resources.
+
+## 2026-10-08
+
 ### #JANUS-MS-JOURNEYS-0012: Normalize Oversized Collection Pages
 
 **Work**: Plan / Build; Updated the shared collection pagination boundary so valid oversized page sizes are normalized before maximum validation without changing invalid-input handling or repository pagination behavior.

@@ -1,3 +1,5 @@
+import type { ParentReference } from '@common/parent-reference.js';
+
 export type EntityType = 'journey' | 'folder' | 'task';
 
 export type TaskState =
@@ -13,7 +15,7 @@ export interface Progress {
 export interface Journey {
   uid: string;
   type: 'journey';
-  parentUid: string;
+  parent: ParentReference;
   name: string;
   description: string | null;
   metadata: Record<string, unknown>;
@@ -25,7 +27,7 @@ export interface Journey {
 export interface Folder {
   uid: string;
   type: 'folder';
-  parentUid: string;
+  parent: ParentReference;
   name: string;
   description: string | null;
   orderIndex: unknown;
@@ -38,7 +40,7 @@ export interface Folder {
 export interface Task {
   uid: string;
   type: 'task';
-  parentUid: string;
+  parent: ParentReference;
   name: string;
   description: string | null;
   taskType: null;

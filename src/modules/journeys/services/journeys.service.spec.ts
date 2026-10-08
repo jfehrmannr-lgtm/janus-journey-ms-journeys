@@ -11,7 +11,7 @@ describe('JourneysService', () => {
       update: jest.fn().mockResolvedValue(undefined),
     };
     const service = new JourneysService(repository);
-    const input = { name: 'Journey', parentUid: 'user-1' };
+    const input = { name: 'Journey', parent: { type: 'user', uid: 'user-1' } };
 
     await service.create(input);
     await service.findAll({ page: 1, size: 20 });

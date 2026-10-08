@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -14,6 +15,7 @@ import {
   FolderSchema,
 } from '../../folders/schemas/folder.schema.js';
 import { TaskDocument, TaskSchema } from '../../tasks/schemas/task.schema.js';
+import type { ParentReference } from '@common/parent-reference.js';
 import type { Journey } from '../types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
 import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
@@ -32,12 +34,14 @@ export class JourneysRepository {
   ) {}
 
   async create(input: CreateJourneyDto): Promise<Journey> {
+    this.validateParent(input.parent);
+
     try {
       const journey = await this.journeyModel.create({
         description: input.description ?? null,
         metadata: input.metadata ?? {},
         name: input.name,
-        parentUid: input.parentUid,
+        parent: input.parent,
         type: 'journey',
         uid: `journey-${randomUUID()}`,
       });
@@ -83,7 +87,10 @@ export class JourneysRepository {
     const current = await this.findByUid(uid);
     const update: Record<string, unknown> = {};
 
-    if (input.parentUid !== undefined) update.parentUid = input.parentUid;
+    if (input.parent !== undefined) {
+      this.validateParent(input.parent);
+      update.parent = input.parent;
+    }
     if (input.name !== undefined) update.name = input.name;
     if (input.description !== undefined) update.description = input.description;
     if (input.metadata !== undefined) update.metadata = input.metadata;
@@ -128,19 +135,27 @@ export class JourneysRepository {
         }
 
         const folders = await this.folderModel
-          .find({ parentUid: uid })
+          .find({ 'parent.uid': uid, 'parent.type': 'journey' })
           .session(session)
           .select({ _id: 0, uid: 1 })
           .lean<{ uid: string }[]>()
           .exec();
-        const parentUids = [uid, ...folders.map((folder) => folder.uid)];
-
         await this.taskModel
-          .deleteMany({ parentUid: { $in: parentUids } })
+          .deleteMany({
+            $or: [
+              { 'parent.uid': uid, 'parent.type': 'journey' },
+              {
+                'parent.uid': {
+                  $in: folders.map((folder) => folder.uid),
+                },
+                'parent.type': 'folder',
+              },
+            ],
+          })
           .session(session)
           .exec();
         await this.folderModel
-          .deleteMany({ parentUid: uid })
+          .deleteMany({ 'parent.uid': uid, 'parent.type': 'journey' })
           .session(session)
           .exec();
         await this.journeyModel.deleteOne({ uid }).session(session).exec();
@@ -156,7 +171,7 @@ export class JourneysRepository {
       description: document.description ?? null,
       metadata: document.metadata ?? {},
       name: document.name,
-      parentUid: document.parentUid,
+      parent: document.parent,
       type: 'journey',
       uid: document.uid,
       updatedAt: document.updatedAt,
@@ -173,6 +188,12 @@ export class JourneysRepository {
       throw new ConflictException(
         'The Journey violates a uniqueness constraint',
       );
+    }
+  }
+
+  private validateParent(parent: ParentReference): void {
+    if (parent.type !== 'user') {
+      throw new BadRequestException('Journey parent must be a User');
     }
   }
 }

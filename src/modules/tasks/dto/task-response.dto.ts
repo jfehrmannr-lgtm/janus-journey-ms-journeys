@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { TaskState } from '@journeys/types/journey.types.js';
+import { ParentReferenceDto } from '@common/parent-reference.dto.js';
 
 export class TaskResponseDto {
   @ApiProperty()
@@ -8,8 +9,8 @@ export class TaskResponseDto {
   @ApiProperty({ enum: ['task'] })
   type!: 'task';
 
-  @ApiProperty()
-  parentUid!: string;
+  @ApiProperty({ type: ParentReferenceDto })
+  parent!: ParentReferenceDto;
 
   @ApiProperty()
   name!: string;

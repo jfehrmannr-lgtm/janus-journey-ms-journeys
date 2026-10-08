@@ -1,18 +1,21 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsObject,
   IsOptional,
   IsString,
   Length,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { ParentReferenceDto } from '@common/parent-reference.dto.js';
 
 export class UpdateJourneyDto {
-  @ApiPropertyOptional({ description: 'UID of the owning User.' })
+  @ApiPropertyOptional({ type: ParentReferenceDto })
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
-  parentUid?: string;
+  @ValidateNested()
+  @Type(() => ParentReferenceDto)
+  parent?: ParentReferenceDto;
 
   @ApiPropertyOptional({ example: 'Updated Journey name' })
   @IsOptional()

@@ -10,6 +10,10 @@ import {
   TaskSchema,
   TaskSchemaDefinition,
 } from '../tasks/schemas/task.schema.js';
+import {
+  JourneySchema,
+  JourneySchemaDefinition,
+} from '../journeys/schemas/journey.schema.js';
 import { FoldersService } from './services/folders.service.js';
 
 @Module({
@@ -18,6 +22,7 @@ import { FoldersService } from './services/folders.service.js';
     MongooseModule.forFeature([
       { name: FolderSchema.name, schema: FolderSchemaDefinition },
       { name: TaskSchema.name, schema: TaskSchemaDefinition },
+      { name: JourneySchema.name, schema: JourneySchemaDefinition },
     ]),
   ],
   providers: [FoldersRepository, FoldersService],

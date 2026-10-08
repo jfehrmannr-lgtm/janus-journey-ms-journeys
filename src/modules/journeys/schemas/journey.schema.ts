@@ -1,12 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
+import { ParentReferenceSchema } from '@common/parent-reference.schema.js';
 
 export type JourneyDocument = HydratedDocument<JourneySchema>;
 
 @Schema({ collection: 'journeys', timestamps: true, versionKey: false })
 export class JourneySchema {
-  @Prop({ required: true, type: String })
-  parentUid!: string;
+  @Prop({ required: true, type: ParentReferenceSchema })
+  parent!: ParentReferenceSchema;
 
   @Prop({ required: true, type: String })
   name!: string;
@@ -30,4 +31,4 @@ export class JourneySchema {
 
 export const JourneySchemaDefinition =
   SchemaFactory.createForClass(JourneySchema);
-JourneySchemaDefinition.index({ parentUid: 1 });
+JourneySchemaDefinition.index({ 'parent.uid': 1, 'parent.type': 1 });

@@ -1,18 +1,21 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsObject,
   IsOptional,
   IsString,
   Length,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { ParentReferenceDto } from '@common/parent-reference.dto.js';
 
 export class UpdateFolderDto {
-  @ApiPropertyOptional({ description: 'UID of the owning User or Journey.' })
+  @ApiPropertyOptional({ type: ParentReferenceDto })
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
-  parentUid?: string;
+  @ValidateNested()
+  @Type(() => ParentReferenceDto)
+  parent?: ParentReferenceDto;
 
   @ApiPropertyOptional({ example: 'Updated folder name' })
   @IsOptional()

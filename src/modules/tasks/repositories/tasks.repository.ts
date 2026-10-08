@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -9,6 +10,15 @@ import { randomUUID } from 'node:crypto';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
 import { TaskDocument, TaskSchema } from '../schemas/task.schema.js';
+import {
+  JourneyDocument,
+  JourneySchema,
+} from '../../journeys/schemas/journey.schema.js';
+import {
+  FolderDocument,
+  FolderSchema,
+} from '../../folders/schemas/folder.schema.js';
+import type { ParentReference } from '@common/parent-reference.js';
 import type { Task } from '@journeys/types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
 import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
@@ -18,9 +28,15 @@ export class TasksRepository {
   constructor(
     @InjectModel(TaskSchema.name)
     private readonly taskModel: Model<TaskDocument>,
+    @InjectModel(JourneySchema.name)
+    private readonly journeyModel: Model<JourneyDocument>,
+    @InjectModel(FolderSchema.name)
+    private readonly folderModel: Model<FolderDocument>,
   ) {}
 
   async create(input: CreateTaskDto): Promise<Task> {
+    await this.validateParent(input.parent);
+
     try {
       const task = await this.taskModel.create({
         description: input.description ?? null,
@@ -28,7 +44,7 @@ export class TasksRepository {
         metadata: input.metadata ?? {},
         name: input.name,
         orderIndex: input.orderIndex,
-        parentUid: input.parentUid,
+        parent: input.parent,
         state: input.state,
         taskType: null,
         type: 'task',
@@ -76,7 +92,10 @@ export class TasksRepository {
     const current = await this.findByUid(uid);
     const update: Record<string, unknown> = {};
 
-    if (input.parentUid !== undefined) update.parentUid = input.parentUid;
+    if (input.parent !== undefined) {
+      await this.validateParent(input.parent);
+      update.parent = input.parent;
+    }
     if (input.name !== undefined) update.name = input.name;
     if (input.description !== undefined) update.description = input.description;
     if (input.state !== undefined) update.state = input.state;
@@ -123,7 +142,7 @@ export class TasksRepository {
       metadata: document.metadata ?? {},
       name: document.name,
       orderIndex: document.orderIndex,
-      parentUid: document.parentUid,
+      parent: document.parent,
       state: document.state,
       taskType: null,
       type: 'task',
@@ -141,5 +160,39 @@ export class TasksRepository {
     ) {
       throw new ConflictException('The Task violates a uniqueness constraint');
     }
+  }
+
+  private async validateParent(parent: ParentReference): Promise<void> {
+    if (parent.type === 'user') return;
+
+    if (parent.type === 'journey') {
+      const journey = await this.journeyModel
+        .findOne({ uid: parent.uid, type: 'journey' })
+        .select({ _id: 1 })
+        .lean()
+        .exec();
+
+      if (!journey) {
+        throw new NotFoundException(`Journey ${parent.uid} was not found`);
+      }
+      return;
+    }
+
+    if (parent.type === 'folder') {
+      const folder = await this.folderModel
+        .findOne({ uid: parent.uid, type: 'folder' })
+        .select({ _id: 1 })
+        .lean()
+        .exec();
+
+      if (!folder) {
+        throw new NotFoundException(`Folder ${parent.uid} was not found`);
+      }
+      return;
+    }
+
+    throw new BadRequestException(
+      'Task parent must be a User, Journey, or Folder',
+    );
   }
 }

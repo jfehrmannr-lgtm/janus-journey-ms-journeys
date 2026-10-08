@@ -34,6 +34,7 @@ describe('FoldersRepository deletion', () => {
     const repository = new FoldersRepository(
       folderModel as never,
       taskModel as never,
+      {} as never,
       connection as never,
     );
 

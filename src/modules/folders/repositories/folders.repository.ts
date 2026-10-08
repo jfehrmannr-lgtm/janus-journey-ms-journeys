@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -10,6 +11,11 @@ import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FolderDocument, FolderSchema } from '../schemas/folder.schema.js';
 import { TaskDocument, TaskSchema } from '../../tasks/schemas/task.schema.js';
+import {
+  JourneyDocument,
+  JourneySchema,
+} from '../../journeys/schemas/journey.schema.js';
+import type { ParentReference } from '@common/parent-reference.js';
 import type { Folder } from '@journeys/types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
 import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
@@ -21,18 +27,22 @@ export class FoldersRepository {
     private readonly folderModel: Model<FolderDocument>,
     @InjectModel(TaskSchema.name)
     private readonly taskModel: Model<TaskDocument>,
+    @InjectModel(JourneySchema.name)
+    private readonly journeyModel: Model<JourneyDocument>,
     @InjectConnection()
     private readonly connection: Connection,
   ) {}
 
   async create(input: CreateFolderDto): Promise<Folder> {
+    await this.validateParent(input.parent);
+
     try {
       const folder = await this.folderModel.create({
         description: input.description ?? null,
         metadata: input.metadata ?? {},
         name: input.name,
         orderIndex: input.orderIndex,
-        parentUid: input.parentUid,
+        parent: input.parent,
         type: 'folder',
         uid: `folder-${randomUUID()}`,
       });
@@ -78,7 +88,10 @@ export class FoldersRepository {
     const current = await this.findByUid(uid);
     const update: Record<string, unknown> = {};
 
-    if (input.parentUid !== undefined) update.parentUid = input.parentUid;
+    if (input.parent !== undefined) {
+      await this.validateParent(input.parent);
+      update.parent = input.parent;
+    }
     if (input.name !== undefined) update.name = input.name;
     if (input.description !== undefined) update.description = input.description;
     if (input.orderIndex !== undefined) update.orderIndex = input.orderIndex;
@@ -113,7 +126,7 @@ export class FoldersRepository {
     try {
       await session.withTransaction(async () => {
         const folder = await this.folderModel
-          .findOne({ uid })
+          .findOne({ uid, type: 'folder' })
           .session(session)
           .select({ _id: 1 })
           .lean()
@@ -124,7 +137,7 @@ export class FoldersRepository {
         }
 
         await this.taskModel
-          .deleteMany({ parentUid: uid })
+          .deleteMany({ 'parent.uid': uid, 'parent.type': 'folder' })
           .session(session)
           .exec();
         await this.folderModel.deleteOne({ uid }).session(session).exec();
@@ -141,7 +154,7 @@ export class FoldersRepository {
       metadata: document.metadata ?? {},
       name: document.name,
       orderIndex: document.orderIndex,
-      parentUid: document.parentUid,
+      parent: document.parent,
       type: 'folder',
       uid: document.uid,
       updatedAt: document.updatedAt,
@@ -158,6 +171,24 @@ export class FoldersRepository {
       throw new ConflictException(
         'The Folder violates a uniqueness constraint',
       );
+    }
+  }
+
+  private async validateParent(parent: ParentReference): Promise<void> {
+    if (parent.type === 'user') return;
+
+    if (parent.type !== 'journey') {
+      throw new BadRequestException('Folder parent must be a User or Journey');
+    }
+
+    const journey = await this.journeyModel
+      .findOne({ uid: parent.uid, type: 'journey' })
+      .select({ _id: 1 })
+      .lean()
+      .exec();
+
+    if (!journey) {
+      throw new NotFoundException(`Journey ${parent.uid} was not found`);
     }
   }
 }

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
@@ -7,13 +8,15 @@ import {
   IsString,
   Length,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { ParentReferenceDto } from '@common/parent-reference.dto.js';
 
 export class CreateTaskDto {
-  @ApiProperty({ description: 'UID of the owning User, Journey, or Folder.' })
-  @IsString()
-  @Length(1, 255)
-  parentUid!: string;
+  @ApiProperty({ type: ParentReferenceDto })
+  @ValidateNested()
+  @Type(() => ParentReferenceDto)
+  parent!: ParentReferenceDto;
 
   @ApiProperty({ example: 'Understand HTTP' })
   @IsString()

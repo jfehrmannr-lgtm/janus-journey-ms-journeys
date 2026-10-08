@@ -1,13 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Schema as MongooseSchema, type HydratedDocument } from 'mongoose';
 import type { TaskState } from '@journeys/types/journey.types.js';
+import { ParentReferenceSchema } from '@common/parent-reference.schema.js';
 
 export type TaskDocument = HydratedDocument<TaskSchema>;
 
 @Schema({ collection: 'tasks', timestamps: true, versionKey: false })
 export class TaskSchema {
-  @Prop({ required: true, type: String })
-  parentUid!: string;
+  @Prop({ required: true, type: ParentReferenceSchema })
+  parent!: ParentReferenceSchema;
 
   @Prop({ required: true, type: String })
   name!: string;
@@ -46,4 +47,8 @@ export class TaskSchema {
 }
 
 export const TaskSchemaDefinition = SchemaFactory.createForClass(TaskSchema);
-TaskSchemaDefinition.index({ parentUid: 1, orderIndex: 1 });
+TaskSchemaDefinition.index({
+  'parent.uid': 1,
+  'parent.type': 1,
+  orderIndex: 1,
+});
