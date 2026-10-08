@@ -14,7 +14,7 @@ export class TaskResponseDto {
   @ApiProperty()
   name!: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ example: 'Description for task', nullable: true })
   description!: string | null;
 
   @ApiProperty({ nullable: true, type: String })
@@ -28,7 +28,7 @@ export class TaskResponseDto {
   @ApiProperty()
   isVisible!: boolean;
 
-  @ApiPropertyOptional({ type: Object })
+  @ApiPropertyOptional({ example: 100, type: Number })
   orderIndex?: unknown;
 
   @ApiProperty({ type: Object })

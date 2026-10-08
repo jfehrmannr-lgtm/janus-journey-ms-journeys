@@ -1,5 +1,34 @@
 # AI Changelog
 
+## 2026-10-08
+
+### #JANUS-MS-JOURNEYS-0007: Correct Journey and Folder Response Examples
+
+**Work**: Plan / Build; Corrected shared response DTO Swagger metadata so all documented Journey and Folder response endpoints expose contract-shaped examples without changing runtime behavior.
+
+- Added a string example for Journey response descriptions, covering collection, detail, create, replace, and patch responses.
+- Added string description and numeric `orderIndex` examples to Folder responses, covering collection, detail, replace, and patch responses.
+- Preserved the existing response DTO types, controllers, validation, persistence, and endpoint behavior.
+
+## 2026-10-08
+
+### #JANUS-MS-JOURNEYS-0006: Correct Resource Swagger Examples
+
+**Work**: Plan / Build; Verified the affected Folder and Task DTO metadata against the existing resource contracts and corrected only the generated Swagger examples for descriptions and ordering.
+
+- Documented `orderIndex` as a numeric example of `100` for Folder and Task create/update DTOs and Task responses instead of an empty object schema.
+- Added resource-specific description examples for Folder and Task request DTOs and Task responses.
+- Preserved the existing `unknown` transport/persistence type and all runtime validation and business behavior.
+
+## 2026-10-08
+
+### #JANUS-MS-JOURNEYS-0005: Document Collection Pagination Parameters
+
+**Work**: Plan / Build; Verified the collection query DTO and generated OpenAPI document, then documented the existing `page` and `size` parameters without changing pagination or filtering behavior.
+
+- Added Swagger metadata for the shared required `page` and `size` query parameters, including their existing bounds and examples.
+- Added OpenAPI e2e assertions for `GET /journeys`, `GET /folders`, and `GET /tasks` to verify both documented parameters are generated and no unsupported filters are advertised.
+
 ## 2026-10-07
 
 ### #JANUS-MS-JOURNEYS-0004: Add Bounded Collection Results

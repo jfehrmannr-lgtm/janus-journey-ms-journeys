@@ -27,7 +27,11 @@ export class JourneyResponseDto {
   @ApiProperty()
   name!: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({
+    example: 'Description for journey',
+    nullable: true,
+    type: String,
+  })
   description!: string | null;
 
   @ApiProperty({ type: Object })

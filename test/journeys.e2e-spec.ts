@@ -195,6 +195,31 @@ describe('Journeys API (e2e)', () => {
   });
 
   it('exposes Swagger documentation without authentication requirements', async () => {
-    await request(app.getHttpServer()).get('/docs-json').expect(200);
+    await request(app.getHttpServer())
+      .get('/docs-json')
+      .expect(200)
+      .expect((response) => {
+        const document = response.body as {
+          paths: Record<
+            string,
+            {
+              get?: {
+                parameters?: Array<{ name: string; in?: string }>;
+              };
+            }
+          >;
+        };
+
+        for (const path of ['/journeys', '/folders', '/tasks']) {
+          const parameters = document.paths[path]?.get?.parameters ?? [];
+          expect(parameters).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ in: 'query', name: 'page' }),
+              expect.objectContaining({ in: 'query', name: 'size' }),
+            ]),
+          );
+          expect(parameters).toHaveLength(2);
+        }
+      });
   });
 });

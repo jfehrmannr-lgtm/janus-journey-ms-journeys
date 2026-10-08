@@ -20,12 +20,12 @@ export class UpdateFolderDto {
   @Length(1, 255)
   name?: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ example: 'Description for folder', nullable: true })
   @ValidateIf((_, value: unknown) => value !== null && value !== undefined)
   @IsString()
   description?: string | null;
 
-  @ApiPropertyOptional({ type: Object })
+  @ApiPropertyOptional({ example: 100, type: Number })
   @IsOptional()
   orderIndex?: unknown;
 

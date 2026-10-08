@@ -20,7 +20,7 @@ export class CreateTaskDto {
   @Length(1, 255)
   name!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ example: 'Description for task', nullable: true })
   @ValidateIf((_, value: unknown) => value !== null && value !== undefined)
   @IsString()
   description?: string | null;
@@ -35,7 +35,7 @@ export class CreateTaskDto {
   @IsBoolean()
   isVisible!: boolean;
 
-  @ApiPropertyOptional({ type: Object })
+  @ApiPropertyOptional({ example: 100, type: Number })
   @IsOptional()
   orderIndex?: unknown;
 
