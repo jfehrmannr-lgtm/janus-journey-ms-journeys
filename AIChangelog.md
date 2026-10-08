@@ -2,6 +2,16 @@
 
 ## 2026-10-08
 
+### #JANUS-MS-JOURNEYS-0008: Document Journey Creation Errors
+
+**Work**: Plan / Build; Traced `POST /journeys` validation and persistence error handling and documented only the HTTP errors implemented within `ms-journeys`.
+
+- Added Swagger documentation for `400 Bad Request` from DTO validation and `409 Conflict` from duplicate-key handling.
+- Confirmed that parent existence validation is not implemented; `404 Not Found` remains unresolved technical debt and was not advertised as supported behavior.
+- Made no changes to validation, parent resolution, persistence, or cross-service communication.
+
+## 2026-10-08
+
 ### #JANUS-MS-JOURNEYS-0007: Correct Journey and Folder Response Examples
 
 **Work**: Plan / Build; Corrected shared response DTO Swagger metadata so all documented Journey and Folder response endpoints expose contract-shaped examples without changing runtime behavior.

@@ -11,6 +11,8 @@ import {
   Put,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
@@ -29,6 +31,10 @@ export class JourneysController {
   constructor(private readonly journeysService: JourneysService) {}
 
   @ApiOperation({ summary: 'Create a Journey' })
+  @ApiBadRequestResponse({ description: 'Invalid Journey request payload' })
+  @ApiConflictResponse({
+    description: 'Journey violates a uniqueness constraint',
+  })
   @ApiResponse({ status: 201, type: JourneyResponseDto })
   @Post()
   create(@Body() input: CreateJourneyDto): Promise<JourneyResponseDto> {
