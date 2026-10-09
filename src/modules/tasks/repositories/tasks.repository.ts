@@ -98,6 +98,25 @@ export class TasksRepository {
     return documents.map((document) => this.toTask(document));
   }
 
+  async findByParentUids(
+    parents: Array<{ uid: string; type: 'journey' | 'folder' }>,
+  ): Promise<Task[]> {
+    if (parents.length === 0) return [];
+
+    const documents = await this.taskModel
+      .find({
+        $or: parents.map((parent) => ({
+          'parent.uid': parent.uid,
+          'parent.type': parent.type,
+        })),
+      })
+      .sort({ orderIndex: 1, uid: 1 })
+      .lean<TaskSchema[]>()
+      .exec();
+
+    return documents.map((document) => this.toTask(document));
+  }
+
   async update(uid: string, input: UpdateTaskDto): Promise<Task> {
     const current = await this.findByUid(uid);
     const update: Record<string, unknown> = {};

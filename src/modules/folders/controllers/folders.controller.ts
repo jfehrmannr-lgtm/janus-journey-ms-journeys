@@ -57,10 +57,20 @@ export class FoldersController {
 
   @ApiOperation({ summary: 'Get a Folder by UID' })
   @ApiNotFoundResponse({ description: 'Folder not found' })
-  @ApiResponse({ status: 200, type: FolderResponseDto })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      properties: {
+        items: { $ref: '#/components/schemas/FolderResponseDto' },
+      },
+      type: 'object',
+    },
+  })
   @Get(':uid')
-  findByUid(@Param('uid') uid: string): Promise<FolderResponseDto> {
-    return this.foldersService.findByUid(uid);
+  async findByUid(
+    @Param('uid') uid: string,
+  ): Promise<{ items: FolderResponseDto }> {
+    return { items: await this.foldersService.findByUid(uid) };
   }
 
   @ApiOperation({ summary: 'Partially update a Folder' })

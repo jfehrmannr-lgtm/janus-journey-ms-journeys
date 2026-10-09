@@ -63,10 +63,20 @@ export class JourneysController {
 
   @ApiOperation({ summary: 'Get a Journey by UID' })
   @ApiNotFoundResponse({ description: 'Journey not found' })
-  @ApiResponse({ status: 200, type: JourneyResponseDto })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      properties: {
+        items: { $ref: '#/components/schemas/JourneyResponseDto' },
+      },
+      type: 'object',
+    },
+  })
   @Get(':uid')
-  findByUid(@Param('uid') uid: string): Promise<JourneyResponseDto> {
-    return this.journeysService.findByUid(uid);
+  async findByUid(
+    @Param('uid') uid: string,
+  ): Promise<{ items: JourneyResponseDto }> {
+    return { items: await this.journeysService.findByUid(uid) };
   }
 
   @ApiOperation({ summary: 'Partially update a Journey' })

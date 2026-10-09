@@ -57,10 +57,20 @@ export class TasksController {
 
   @ApiOperation({ summary: 'Get a Task by UID' })
   @ApiNotFoundResponse({ description: 'Task not found' })
-  @ApiResponse({ status: 200, type: TaskResponseDto })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      properties: {
+        items: { $ref: '#/components/schemas/TaskResponseDto' },
+      },
+      type: 'object',
+    },
+  })
   @Get(':uid')
-  findByUid(@Param('uid') uid: string): Promise<TaskResponseDto> {
-    return this.tasksService.findByUid(uid);
+  async findByUid(
+    @Param('uid') uid: string,
+  ): Promise<{ items: TaskResponseDto }> {
+    return { items: await this.tasksService.findByUid(uid) };
   }
 
   @ApiOperation({ summary: 'Partially update a Task' })

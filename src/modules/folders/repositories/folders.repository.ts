@@ -94,6 +94,16 @@ export class FoldersRepository {
     return documents.map((document) => this.toFolder(document));
   }
 
+  async findByJourneyUid(journeyUid: string): Promise<Folder[]> {
+    const documents = await this.folderModel
+      .find({ 'parent.uid': journeyUid, 'parent.type': 'journey' })
+      .sort({ orderIndex: 1, uid: 1 })
+      .lean<FolderSchema[]>()
+      .exec();
+
+    return documents.map((document) => this.toFolder(document));
+  }
+
   async update(uid: string, input: UpdateFolderDto): Promise<Folder> {
     const current = await this.findByUid(uid);
     const update: Record<string, unknown> = {};

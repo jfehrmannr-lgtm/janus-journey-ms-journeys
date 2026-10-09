@@ -2,6 +2,17 @@
 
 ## 2026-10-09
 
+### #JANUS-MS-JOURNEYS-0016: Standardize Resource Retrieval Responses
+
+**Work**: Plan / Build; Standardized individual resource GET responses and added batched complete-resource retrieval for Journeys, Folders, and Tasks without changing collection or User root contracts.
+
+- Wrapped `GET /journeys/:uid`, `GET /folders/:uid`, and `GET /tasks/:uid` results in `{ items }` and updated their Swagger response schemas.
+- Added `GET /users/resources/:resourceType/:resourceId` with Journey, Folder, and Task variants.
+- Included nested Folder Tasks and direct Journey Tasks, preserving parent references, visibility, state, and ordering while avoiding per-child queries.
+- Added service coverage for nested grouping, Folder retrieval, and Task lookup compatibility.
+
+## 2026-10-09
+
 ### #JANUS-MS-JOURNEYS-0015: Add User Root Resources Endpoint
 
 **Work**: Plan / Build; Added the unpaginated User root-resource read boundary for direct Journeys, Folders, and Tasks owned by a specified User parent reference.

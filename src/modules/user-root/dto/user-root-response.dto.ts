@@ -27,3 +27,30 @@ export class UserRootResponseDto {
   })
   registers!: number;
 }
+
+export class FolderResourceResponseDto extends FolderResponseDto {
+  @ApiProperty({ type: [TaskResponseDto] })
+  tasks!: TaskResponseDto[];
+}
+
+export class JourneyResourceResponseDto extends JourneyResponseDto {
+  @ApiProperty({ type: [FolderResourceResponseDto] })
+  folders!: FolderResourceResponseDto[];
+
+  @ApiProperty({ type: [TaskResponseDto] })
+  tasks!: TaskResponseDto[];
+}
+
+export class ResourceResponseDto {
+  @ApiProperty({
+    description:
+      'The requested resource. Its concrete shape depends on resourceType.',
+    oneOf: [
+      { $ref: '#/components/schemas/JourneyResourceResponseDto' },
+      { $ref: '#/components/schemas/FolderResourceResponseDto' },
+      { $ref: '#/components/schemas/TaskResponseDto' },
+    ],
+  })
+  items!:
+    JourneyResourceResponseDto | FolderResourceResponseDto | TaskResponseDto;
+}

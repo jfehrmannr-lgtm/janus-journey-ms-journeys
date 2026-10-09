@@ -51,3 +51,12 @@ export interface Task {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface FolderWithTasks extends Folder {
+  tasks: Task[];
+}
+
+export interface JourneyWithResources extends Journey {
+  folders: FolderWithTasks[];
+  tasks: Task[];
+}
