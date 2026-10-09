@@ -1,5 +1,15 @@
 # AI Changelog
 
+## 2026-10-09
+
+### #JANUS-MS-JOURNEYS-0014: Normalize Shared Pagination After Validation
+
+**Work**: Plan / Build; Corrected the shared `PaginationQueryDto` so all Journey, Folder, and Task collection endpoints accept valid oversized `size` values and normalize them after validation.
+
+- Removed the input maximum validator and DTO-level pre-validation clamp.
+- Added service-level effective-size normalization to 200 for all three collection services.
+- Updated Swagger and tests for integer `page`/`size` parameters without a maximum.
+
 ## 2026-10-08
 
 ### #JANUS-MS-JOURNEYS-0013: Use Typed Parent References

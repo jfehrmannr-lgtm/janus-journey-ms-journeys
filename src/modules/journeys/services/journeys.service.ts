@@ -4,7 +4,10 @@ import { UpdateJourneyDto } from '../dto/update-journey.dto.js';
 import { JourneysRepository } from '../repositories/journeys.repository.js';
 import type { Journey } from '../types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
-import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
+import {
+  effectivePageSize,
+  type PaginationQueryDto,
+} from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class JourneysService {
@@ -15,7 +18,10 @@ export class JourneysService {
   }
 
   findAll(query: PaginationQueryDto): Promise<CollectionResult<Journey>> {
-    return this.journeysRepository.findAll(query);
+    return this.journeysRepository.findAll({
+      ...query,
+      size: effectivePageSize(query.size),
+    });
   }
 
   findByUid(uid: string): Promise<Journey> {

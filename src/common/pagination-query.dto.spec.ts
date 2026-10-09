@@ -6,10 +6,10 @@ describe('PaginationQueryDto', () => {
   it('normalizes oversized integer sizes to 200', () => {
     expect(
       plainToInstance(PaginationQueryDto, { page: '1', size: '201' }).size,
-    ).toBe(200);
+    ).toBe(201);
     expect(
       plainToInstance(PaginationQueryDto, { page: '1', size: '1000' }).size,
-    ).toBe(200);
+    ).toBe(1000);
   });
 
   it('preserves valid sizes within the maximum', () => {

@@ -52,7 +52,7 @@ describe('Journeys API (e2e)', () => {
       .expect(200);
   });
 
-  it.each([20, 200, 201, 1000])(
+  it.each([1, 50, 200, 201, 2000, 40000])(
     'accepts collection size=%i for all resources',
     async (size) => {
       for (const resource of ['journeys', 'folders', 'tasks']) {
@@ -63,7 +63,7 @@ describe('Journeys API (e2e)', () => {
     },
   );
 
-  it.each(['not-a-number', '0', '-1'])(
+  it.each(['0', '-20', '1.5', 'abc', 'Infinity'])(
     'rejects invalid collection size=%s for all resources',
     async (size) => {
       for (const resource of ['journeys', 'folders', 'tasks']) {
@@ -442,7 +442,11 @@ describe('Journeys API (e2e)', () => {
                 parameters?: Array<{
                   name: string;
                   in?: string;
-                  schema?: { maximum?: number };
+                  schema?: {
+                    type?: string;
+                    minimum?: number;
+                    maximum?: number;
+                  };
                 }>;
               };
               put?: unknown;
@@ -463,7 +467,11 @@ describe('Journeys API (e2e)', () => {
           const sizeParameter = parameters.find(
             (parameter) => parameter.name === 'size',
           );
-          expect(sizeParameter?.schema?.maximum).toBe(200);
+          expect(sizeParameter?.schema).toMatchObject({
+            minimum: 1,
+            type: 'integer',
+          });
+          expect(sizeParameter?.schema?.maximum).toBeUndefined();
         }
 
         for (const path of [

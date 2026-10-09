@@ -4,7 +4,10 @@ import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FoldersRepository } from '../repositories/folders.repository.js';
 import type { Folder } from '@journeys/types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
-import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
+import {
+  effectivePageSize,
+  type PaginationQueryDto,
+} from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class FoldersService {
@@ -15,7 +18,10 @@ export class FoldersService {
   }
 
   findAll(query: PaginationQueryDto): Promise<CollectionResult<Folder>> {
-    return this.foldersRepository.findAll(query);
+    return this.foldersRepository.findAll({
+      ...query,
+      size: effectivePageSize(query.size),
+    });
   }
 
   findByUid(uid: string): Promise<Folder> {

@@ -4,7 +4,10 @@ import { UpdateTaskDto } from '../dto/update-task.dto.js';
 import { TasksRepository } from '../repositories/tasks.repository.js';
 import type { Task } from '@journeys/types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
-import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
+import {
+  effectivePageSize,
+  type PaginationQueryDto,
+} from '@common/pagination-query.dto.js';
 
 @Injectable()
 export class TasksService {
@@ -15,7 +18,10 @@ export class TasksService {
   }
 
   findAll(query: PaginationQueryDto): Promise<CollectionResult<Task>> {
-    return this.tasksRepository.findAll(query);
+    return this.tasksRepository.findAll({
+      ...query,
+      size: effectivePageSize(query.size),
+    });
   }
 
   findByUid(uid: string): Promise<Task> {
