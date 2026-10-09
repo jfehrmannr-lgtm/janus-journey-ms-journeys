@@ -22,6 +22,7 @@ import {
       { name: FolderSchema.name, schema: FolderSchemaDefinition },
     ]),
   ],
+  exports: [TasksRepository],
   providers: [TasksRepository, TasksService],
 })
 export class TasksModule {}

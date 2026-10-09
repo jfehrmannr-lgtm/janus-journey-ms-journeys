@@ -5,6 +5,7 @@ import { validateEnvironment } from './config/configuration.js';
 import { FoldersModule } from './modules/folders/folders.module.js';
 import { JourneysModule } from './modules/journeys/journeys.module.js';
 import { TasksModule } from './modules/tasks/tasks.module.js';
+import { UserRootModule } from './modules/user-root/user-root.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TasksModule } from './modules/tasks/tasks.module.js';
     JourneysModule,
     FoldersModule,
     TasksModule,
+    UserRootModule,
   ],
 })
 export class AppModule {}

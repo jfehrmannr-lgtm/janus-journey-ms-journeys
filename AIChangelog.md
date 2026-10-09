@@ -2,6 +2,16 @@
 
 ## 2026-10-09
 
+### #JANUS-MS-JOURNEYS-0015: Add User Root Resources Endpoint
+
+**Work**: Plan / Build; Added the unpaginated User root-resource read boundary for direct Journeys, Folders, and Tasks owned by a specified User parent reference.
+
+- Added `GET /users/:userId/root` with a documented nested response containing all three resource arrays and a non-empty collection count.
+- Reused the existing resource repositories and response DTOs, filtering by `parent.uid` and `parent.type` and sorting each resource collection independently.
+- Added service, end-to-end, and Swagger coverage for direct-child filtering, ordering, empty results, register counts, and the exact response schema.
+
+## 2026-10-09
+
 ### #JANUS-MS-JOURNEYS-0014: Normalize Shared Pagination After Validation
 
 **Work**: Plan / Build; Corrected the shared `PaginationQueryDto` so all Journey, Folder, and Task collection endpoints accept valid oversized `size` values and normalize them after validation.

@@ -25,6 +25,7 @@ import { FoldersService } from './services/folders.service.js';
       { name: JourneySchema.name, schema: JourneySchemaDefinition },
     ]),
   ],
+  exports: [FoldersRepository],
   providers: [FoldersRepository, FoldersService],
 })
 export class FoldersModule {}

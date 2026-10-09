@@ -83,6 +83,16 @@ export class JourneysRepository {
     return this.toJourney(document);
   }
 
+  async findByUserId(userId: string): Promise<Journey[]> {
+    const documents = await this.journeyModel
+      .find({ 'parent.uid': userId, 'parent.type': 'user' })
+      .sort({ uid: 1 })
+      .lean<JourneySchema[]>()
+      .exec();
+
+    return documents.map((document) => this.toJourney(document));
+  }
+
   async update(uid: string, input: UpdateJourneyDto): Promise<Journey> {
     const current = await this.findByUid(uid);
     const update: Record<string, unknown> = {};

@@ -159,6 +159,130 @@ describe('Journeys API (e2e)', () => {
       .expect(404);
   });
 
+  it('returns only direct User root resources in independent orderings', async () => {
+    const userId = 'user-root-e2e-1';
+    const otherUserId = 'user-root-e2e-other';
+
+    const journeyA = await request(app.getHttpServer())
+      .post('/journeys')
+      .send({
+        name: 'Journey A',
+        parent: { type: 'user', uid: userId },
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/journeys')
+      .send({
+        name: 'Journey B',
+        parent: { type: 'user', uid: userId },
+      })
+      .expect(201);
+    const nestedFolder = await request(app.getHttpServer())
+      .post('/folders')
+      .send({
+        name: 'Nested Folder',
+        parent: {
+          type: 'journey',
+          uid: (journeyA.body as unknown as ResourceBody).uid,
+        },
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/folders')
+      .send({
+        name: 'Root Folder Late',
+        orderIndex: 20,
+        parent: { type: 'user', uid: userId },
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/folders')
+      .send({
+        name: 'Root Folder Early',
+        orderIndex: 10,
+        parent: { type: 'user', uid: userId },
+      })
+      .expect(201);
+    const nestedTask = await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Nested Task',
+        parent: {
+          type: 'folder',
+          uid: (nestedFolder.body as unknown as ResourceBody).uid,
+        },
+        state: 'pending',
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Root Task Late',
+        orderIndex: 20,
+        parent: { type: 'user', uid: userId },
+        state: 'pending',
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/tasks')
+      .send({
+        isVisible: true,
+        name: 'Root Task Early',
+        orderIndex: 10,
+        parent: { type: 'user', uid: userId },
+        state: 'pending',
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/journeys')
+      .send({
+        name: 'Other User Journey',
+        parent: { type: 'user', uid: otherUserId },
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get(`/users/${userId}/root`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as {
+          items: {
+            tasks: Array<{ name: string; uid: string }>;
+            folders: Array<{ name: string }>;
+            journeys: Array<{ name: string }>;
+          };
+          registers: number;
+        };
+
+        expect(body.registers).toBe(3);
+        expect(body.items.journeys.map((item) => item.name)).toEqual([
+          'Journey A',
+          'Journey B',
+        ]);
+        expect(body.items.folders.map((item) => item.name)).toEqual([
+          'Root Folder Early',
+          'Root Folder Late',
+        ]);
+        expect(body.items.tasks.map((item) => item.name)).toEqual([
+          'Root Task Early',
+          'Root Task Late',
+        ]);
+        expect(body.items.tasks.map((item) => item.uid)).not.toContain(
+          (nestedTask.body as unknown as ResourceBody).uid,
+        );
+      });
+
+    await request(app.getHttpServer())
+      .get('/users/user-root-e2e-empty/root')
+      .expect(200)
+      .expect({
+        items: { tasks: [], folders: [], journeys: [] },
+        registers: 0,
+      });
+  });
+
   it('supports PATCH updates without calculating progress', async () => {
     const journeyResponse = await request(app.getHttpServer())
       .post('/journeys')
@@ -448,6 +572,15 @@ describe('Journeys API (e2e)', () => {
                     maximum?: number;
                   };
                 }>;
+                responses?: Record<
+                  string,
+                  {
+                    content?: Record<
+                      string,
+                      { schema?: Record<string, unknown> }
+                    >;
+                  }
+                >;
               };
               put?: unknown;
               delete?: { description?: string; summary?: string };
@@ -507,6 +640,49 @@ describe('Journeys API (e2e)', () => {
           expect(properties?.parent).toBeDefined();
           expect(properties?.parentUid).toBeUndefined();
         }
+
+        const rootPath = document.paths['/users/{userId}/root'];
+        expect(rootPath?.get?.parameters).toEqual([
+          expect.objectContaining({
+            in: 'path',
+            name: 'userId',
+            required: true,
+          }),
+        ]);
+        expect(
+          rootPath?.get?.responses?.['200']?.content?.['application/json']
+            ?.schema,
+        ).toEqual({
+          $ref: '#/components/schemas/UserRootResponseDto',
+        });
+        const rootResponseProperties =
+          document.components.schemas.UserRootResponseDto.properties;
+        const registers = rootResponseProperties?.registers as
+          { description?: string; enum?: number[]; type?: string } | undefined;
+        expect(rootResponseProperties?.items).toEqual({
+          $ref: '#/components/schemas/UserRootItemsDto',
+        });
+        expect(registers).toMatchObject({
+          enum: [0, 1, 2, 3],
+          type: 'integer',
+        });
+        expect(registers?.description).toContain('non-empty');
+        expect(document.components.schemas.UserRootItemsDto.properties).toEqual(
+          {
+            tasks: {
+              items: { $ref: '#/components/schemas/TaskResponseDto' },
+              type: 'array',
+            },
+            folders: {
+              items: { $ref: '#/components/schemas/FolderResponseDto' },
+              type: 'array',
+            },
+            journeys: {
+              items: { $ref: '#/components/schemas/JourneyResponseDto' },
+              type: 'array',
+            },
+          },
+        );
       });
   });
 });

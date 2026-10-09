@@ -25,6 +25,7 @@ import { JourneysService } from './services/journeys.service.js';
       { name: TaskSchema.name, schema: TaskSchemaDefinition },
     ]),
   ],
+  exports: [JourneysRepository],
   providers: [JourneysRepository, JourneysService],
 })
 export class JourneysModule {}

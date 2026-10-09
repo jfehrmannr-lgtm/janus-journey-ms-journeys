@@ -88,6 +88,16 @@ export class TasksRepository {
     return this.toTask(document);
   }
 
+  async findByUserId(userId: string): Promise<Task[]> {
+    const documents = await this.taskModel
+      .find({ 'parent.uid': userId, 'parent.type': 'user' })
+      .sort({ orderIndex: 1, uid: 1 })
+      .lean<TaskSchema[]>()
+      .exec();
+
+    return documents.map((document) => this.toTask(document));
+  }
+
   async update(uid: string, input: UpdateTaskDto): Promise<Task> {
     const current = await this.findByUid(uid);
     const update: Record<string, unknown> = {};
