@@ -7,6 +7,7 @@ import {
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model } from 'mongoose';
 import { randomUUID } from 'node:crypto';
+import { BulkCreateFolderItemDto } from '../dto/bulk-create-folder.dto.js';
 import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FolderDocument, FolderSchema } from '../schemas/folder.schema.js';
@@ -48,6 +49,102 @@ export class FoldersRepository {
       });
 
       return this.toFolder(folder);
+    } catch (error: unknown) {
+      this.throwConflictForDuplicate(error);
+      throw error;
+    }
+  }
+
+  async bulkCreate(
+    inputs: BulkCreateFolderItemDto[],
+  ): Promise<Array<{ clientId?: string; resource: Folder }>> {
+    this.validateClientIds(inputs);
+
+    const invalidParentItems = inputs.filter(
+      (input) =>
+        input.parent.type !== 'user' && input.parent.type !== 'journey',
+    );
+
+    if (invalidParentItems.length > 0) {
+      throw new BadRequestException(
+        `Folder parent must be a User or Journey: ${invalidParentItems
+          .map((input) => input.clientId ?? '<unassigned>')
+          .join(', ')}`,
+      );
+    }
+
+    const journeyUids = [
+      ...new Set(
+        inputs
+          .filter((input) => input.parent.type === 'journey')
+          .map((input) => input.parent.uid),
+      ),
+    ];
+    const journeys =
+      journeyUids.length === 0
+        ? []
+        : await this.journeyModel
+            .find({ uid: { $in: journeyUids }, type: 'journey' })
+            .select({ uid: 1 })
+            .lean<{ uid: string }[]>()
+            .exec();
+    const existingJourneyUids = new Set(journeys.map((journey) => journey.uid));
+    const missingParentItems = inputs.filter(
+      (input) =>
+        input.parent.type === 'journey' &&
+        !existingJourneyUids.has(input.parent.uid),
+    );
+
+    if (missingParentItems.length > 0) {
+      throw new NotFoundException(
+        `Journey parents were not found for bulk Folder items: ${missingParentItems
+          .map(
+            (input) =>
+              `${input.clientId ?? '<unassigned>'} (${input.parent.uid})`,
+          )
+          .join(', ')}`,
+      );
+    }
+
+    const prepared = inputs.map((input) => ({
+      clientId: input.clientId,
+      document: {
+        description: input.description ?? null,
+        metadata: input.metadata ?? {},
+        name: input.name,
+        orderIndex: input.orderIndex,
+        parent: input.parent,
+        type: 'folder' as const,
+        uid: `folder-${randomUUID()}`,
+      },
+    }));
+
+    try {
+      const documents = await this.folderModel.insertMany(
+        prepared.map((item) => item.document),
+        { ordered: true },
+      );
+      const documentsByUid = new Map(
+        documents.map((document) => [document.uid, document]),
+      );
+
+      return prepared.map((item) => {
+        const document = documentsByUid.get(item.document.uid);
+
+        if (!document) {
+          throw new Error(
+            `Bulk Folder ${item.clientId} was not returned after insertion`,
+          );
+        }
+
+        const result = { resource: this.toFolder(document) };
+
+        if (item.clientId !== undefined) {
+          return { clientId: item.clientId, ...result };
+        }
+
+        return result;
+      });
     } catch (error: unknown) {
       this.throwConflictForDuplicate(error);
       throw error;
@@ -190,6 +287,28 @@ export class FoldersRepository {
     ) {
       throw new ConflictException(
         'The Folder violates a uniqueness constraint',
+      );
+    }
+  }
+
+  private validateClientIds(inputs: BulkCreateFolderItemDto[]): void {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+
+    for (const input of inputs) {
+      if (input.clientId === undefined) {
+        continue;
+      }
+
+      if (seen.has(input.clientId)) {
+        duplicates.add(input.clientId);
+      }
+      seen.add(input.clientId);
+    }
+
+    if (duplicates.size > 0) {
+      throw new BadRequestException(
+        `Bulk Folder clientId values must be unique: ${[...duplicates].join(', ')}`,
       );
     }
   }

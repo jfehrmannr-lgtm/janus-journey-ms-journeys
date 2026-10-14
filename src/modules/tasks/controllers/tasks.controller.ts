@@ -10,12 +10,16 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { BulkCreateTasksDto } from '../dto/bulk-create-task.dto.js';
+import { BulkCreateTasksResponseDto } from '../dto/bulk-create-task-response.dto.js';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { TaskResponseDto } from '../dto/task-response.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
@@ -32,6 +36,26 @@ export class TasksController {
   @Post()
   create(@Body() input: CreateTaskDto): Promise<TaskResponseDto> {
     return this.tasksService.create(input);
+  }
+
+  @ApiOperation({
+    summary: 'Bulk create Tasks',
+    description:
+      'Creates multiple Tasks in one request. Each item may reference an existing Journey or Folder and includes its own clientId for result correlation.',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid bulk Task request payload' })
+  @ApiConflictResponse({
+    description: 'A Task violates a uniqueness constraint',
+  })
+  @ApiNotFoundResponse({
+    description: 'A referenced Journey or Folder was not found',
+  })
+  @ApiResponse({ status: 201, type: BulkCreateTasksResponseDto })
+  @Post('bulk')
+  async bulkCreate(
+    @Body() input: BulkCreateTasksDto,
+  ): Promise<BulkCreateTasksResponseDto> {
+    return { items: await this.tasksService.bulkCreate(input.items) };
   }
 
   @ApiOperation({ summary: 'List Tasks' })

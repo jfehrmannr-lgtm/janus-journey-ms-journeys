@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { BulkCreateFolderItemDto } from '../dto/bulk-create-folder.dto.js';
 import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
 import { FoldersRepository } from '../repositories/folders.repository.js';
@@ -15,6 +16,12 @@ export class FoldersService {
 
   create(input: CreateFolderDto): Promise<Folder> {
     return this.foldersRepository.create(input);
+  }
+
+  bulkCreate(
+    inputs: BulkCreateFolderItemDto[],
+  ): Promise<Array<{ clientId?: string; resource: Folder }>> {
+    return this.foldersRepository.bulkCreate(inputs);
   }
 
   findAll(query: PaginationQueryDto): Promise<CollectionResult<Folder>> {

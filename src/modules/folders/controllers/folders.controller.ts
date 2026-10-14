@@ -10,12 +10,16 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { BulkCreateFoldersDto } from '../dto/bulk-create-folder.dto.js';
+import { BulkCreateFoldersResponseDto } from '../dto/bulk-create-folder-response.dto.js';
 import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { FolderResponseDto } from '../dto/folder-response.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
@@ -32,6 +36,24 @@ export class FoldersController {
   @Post()
   create(@Body() input: CreateFolderDto): Promise<FolderResponseDto> {
     return this.foldersService.create(input);
+  }
+
+  @ApiOperation({
+    summary: 'Bulk create Folders',
+    description:
+      'Creates multiple Folders in one request. Each item must reference an existing Journey and includes its own clientId for result correlation.',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid bulk Folder request payload' })
+  @ApiConflictResponse({
+    description: 'A Folder violates a uniqueness constraint',
+  })
+  @ApiNotFoundResponse({ description: 'A referenced Journey was not found' })
+  @ApiResponse({ status: 201, type: BulkCreateFoldersResponseDto })
+  @Post('bulk')
+  async bulkCreate(
+    @Body() input: BulkCreateFoldersDto,
+  ): Promise<BulkCreateFoldersResponseDto> {
+    return { items: await this.foldersService.bulkCreate(input.items) };
   }
 
   @ApiOperation({ summary: 'List Folders' })

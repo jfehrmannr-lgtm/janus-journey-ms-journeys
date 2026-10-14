@@ -1,5 +1,47 @@
 # AI Changelog
 
+## 2026-10-14
+
+### #JANUS-MS-JOURNEYS-0020: Allow User Task Bulk Parents
+
+**Work**: Plan / Build; Extended the generic Task bulk creation contract to support direct User associations consistently with single Task creation.
+
+- Accepted `user`, `journey`, and `folder` parents for `POST /tasks/bulk` while retaining parent existence validation for Journey and Folder records.
+- Added User parent examples to Task bulk Swagger documentation and regression coverage for User-associated Tasks.
+- Kept optional `clientId` correlation behavior and all existing single-resource endpoints unchanged.
+
+## 2026-10-14
+
+### #JANUS-MS-JOURNEYS-0019: Correct Bulk Task Swagger Contract
+
+**Work**: Plan / Build; Aligned the Task bulk request documentation with its generic parent contract and the optional correlation behavior used by bulk resource creation.
+
+- Documented valid Task parent examples for existing Journeys and Folders in `POST /tasks/bulk`.
+- Preserved optional `clientId` behavior, including correlation-only handling and omission when not supplied.
+- Kept single Task creation and BFF/frontend boundaries unchanged.
+
+## 2026-10-14
+
+### #JANUS-MS-JOURNEYS-0018: Correct Bulk Folder Contracts
+
+**Work**: Plan / Build; Corrected generic bulk Folder parent validation and made optional client correlation consistent across Folder and Task bulk creation.
+
+- Allowed Folder items to use existing `user` or `journey` parents while rejecting `folder` and `task` parents, without changing `POST /folders`.
+- Made `clientId` optional for Folder and Task bulk items; supplied values remain request/response correlation only, while omitted values are excluded from responses and persistence.
+- Updated Swagger metadata with optional correlation fields and valid User/Journey Folder parent examples.
+- Added coverage for User and Journey Folder parents, invalid Folder parents, and omitted correlation IDs.
+
+## 2026-10-14
+
+### #JANUS-MS-JOURNEYS-0017: Add Bulk Folder and Task Creation
+
+**Work**: Plan / Build; Added dedicated bulk creation endpoints for Folders and Tasks while preserving the existing single-resource creation routes and domain boundaries.
+
+- Added `POST /folders/bulk` and `POST /tasks/bulk` with validated item envelopes that reuse the existing single-resource create DTO contracts.
+- Validated every item’s unique `clientId`, supported parent relationship, and referenced Journey or Folder existence before persistence.
+- Added efficient repository batch insertion with `insertMany`, preserved metadata/order/state/visibility fields, and returned generated resources correlated by `clientId` rather than response position.
+- Added Swagger response contracts and repository coverage for mixed Task parents, correlation, and invalid parent rejection without changing BFF or frontend code.
+
 ## 2026-10-09
 
 ### #JANUS-MS-JOURNEYS-0016: Standardize Resource Retrieval Responses

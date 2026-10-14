@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { BulkCreateTaskItemDto } from '../dto/bulk-create-task.dto.js';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
 import { TasksRepository } from '../repositories/tasks.repository.js';
@@ -15,6 +16,12 @@ export class TasksService {
 
   create(input: CreateTaskDto): Promise<Task> {
     return this.tasksRepository.create(input);
+  }
+
+  bulkCreate(
+    inputs: BulkCreateTaskItemDto[],
+  ): Promise<Array<{ clientId?: string; resource: Task }>> {
+    return this.tasksRepository.bulkCreate(inputs);
   }
 
   findAll(query: PaginationQueryDto): Promise<CollectionResult<Task>> {

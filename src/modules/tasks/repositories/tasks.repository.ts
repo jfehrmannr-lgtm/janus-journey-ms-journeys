@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { randomUUID } from 'node:crypto';
+import { BulkCreateTaskItemDto } from '../dto/bulk-create-task.dto.js';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
 import { TaskDocument, TaskSchema } from '../schemas/task.schema.js';
@@ -52,6 +53,124 @@ export class TasksRepository {
       });
 
       return this.toTask(task);
+    } catch (error: unknown) {
+      this.throwConflictForDuplicate(error);
+      throw error;
+    }
+  }
+
+  async bulkCreate(
+    inputs: BulkCreateTaskItemDto[],
+  ): Promise<Array<{ clientId?: string; resource: Task }>> {
+    this.validateClientIds(inputs);
+
+    const invalidParentItems = inputs.filter(
+      (input) =>
+        input.parent.type !== 'user' &&
+        input.parent.type !== 'journey' &&
+        input.parent.type !== 'folder',
+    );
+
+    if (invalidParentItems.length > 0) {
+      throw new BadRequestException(
+        `Bulk Task items must use Journey, Folder, or User parents: ${invalidParentItems
+          .map((input) => input.clientId ?? '<unassigned>')
+          .join(', ')}`,
+      );
+    }
+
+    const journeyUids = [
+      ...new Set(
+        inputs
+          .filter((input) => input.parent.type === 'journey')
+          .map((input) => input.parent.uid),
+      ),
+    ];
+    const folderUids = [
+      ...new Set(
+        inputs
+          .filter((input) => input.parent.type === 'folder')
+          .map((input) => input.parent.uid),
+      ),
+    ];
+    const [journeys, folders] = await Promise.all([
+      journeyUids.length === 0
+        ? Promise.resolve([] as Array<{ uid: string }>)
+        : this.journeyModel
+            .find({ uid: { $in: journeyUids }, type: 'journey' })
+            .select({ uid: 1 })
+            .lean<{ uid: string }[]>()
+            .exec(),
+      folderUids.length === 0
+        ? Promise.resolve([] as Array<{ uid: string }>)
+        : this.folderModel
+            .find({ uid: { $in: folderUids }, type: 'folder' })
+            .select({ uid: 1 })
+            .lean<{ uid: string }[]>()
+            .exec(),
+    ]);
+    const existingJourneyUids = new Set(journeys.map((journey) => journey.uid));
+    const existingFolderUids = new Set(folders.map((folder) => folder.uid));
+    const missingParentItems = inputs.filter((input) =>
+      input.parent.type === 'journey'
+        ? !existingJourneyUids.has(input.parent.uid)
+        : input.parent.type === 'folder' &&
+          !existingFolderUids.has(input.parent.uid),
+    );
+
+    if (missingParentItems.length > 0) {
+      throw new NotFoundException(
+        `Parents were not found for bulk Task items: ${missingParentItems
+          .map(
+            (input) =>
+              `${input.clientId ?? '<unassigned>'} (${input.parent.type}:${input.parent.uid})`,
+          )
+          .join(', ')}`,
+      );
+    }
+
+    const prepared = inputs.map((input) => ({
+      clientId: input.clientId,
+      document: {
+        description: input.description ?? null,
+        isVisible: input.isVisible,
+        metadata: input.metadata ?? {},
+        name: input.name,
+        orderIndex: input.orderIndex,
+        parent: input.parent,
+        state: input.state,
+        taskType: null,
+        type: 'task' as const,
+        uid: `task-${randomUUID()}`,
+      },
+    }));
+
+    try {
+      const documents = await this.taskModel.insertMany(
+        prepared.map((item) => item.document),
+        { ordered: true },
+      );
+      const documentsByUid = new Map(
+        documents.map((document) => [document.uid, document]),
+      );
+
+      return prepared.map((item) => {
+        const document = documentsByUid.get(item.document.uid);
+
+        if (!document) {
+          throw new Error(
+            `Bulk Task ${item.clientId} was not returned after insertion`,
+          );
+        }
+
+        const result = { resource: this.toTask(document) };
+
+        if (item.clientId !== undefined) {
+          return { clientId: item.clientId, ...result };
+        }
+
+        return result;
+      });
     } catch (error: unknown) {
       this.throwConflictForDuplicate(error);
       throw error;
@@ -188,6 +307,28 @@ export class TasksRepository {
       error.code === 11000
     ) {
       throw new ConflictException('The Task violates a uniqueness constraint');
+    }
+  }
+
+  private validateClientIds(inputs: BulkCreateTaskItemDto[]): void {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+
+    for (const input of inputs) {
+      if (input.clientId === undefined) {
+        continue;
+      }
+
+      if (seen.has(input.clientId)) {
+        duplicates.add(input.clientId);
+      }
+      seen.add(input.clientId);
+    }
+
+    if (duplicates.size > 0) {
+      throw new BadRequestException(
+        `Bulk Task clientId values must be unique: ${[...duplicates].join(', ')}`,
+      );
     }
   }
 

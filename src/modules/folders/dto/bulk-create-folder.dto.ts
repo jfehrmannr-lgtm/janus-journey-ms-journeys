@@ -1,0 +1,45 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsOptional,
+  IsString,
+  Length,
+  ValidateNested,
+} from 'class-validator';
+import { ParentReferenceDto } from '@common/parent-reference.dto.js';
+import { CreateFolderDto } from './create-folder.dto.js';
+
+export class BulkCreateFolderItemDto extends CreateFolderDto {
+  @ApiPropertyOptional({
+    description: 'Optional client correlation value. It is never persisted.',
+    example: 'folder-client-1',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(1, 255)
+  clientId?: string;
+
+  @ApiProperty({
+    description:
+      'The Folder parent. Valid examples are { uid: "user-123", type: "user" } and { uid: "journey-123", type: "journey" }.',
+    examples: [
+      { uid: 'user-123', type: 'user' },
+      { uid: 'journey-123', type: 'journey' },
+    ],
+    type: ParentReferenceDto,
+  })
+  @ValidateNested()
+  @Type(() => ParentReferenceDto)
+  declare parent: ParentReferenceDto;
+}
+
+export class BulkCreateFoldersDto {
+  @ApiProperty({ type: [BulkCreateFolderItemDto], minItems: 1 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => BulkCreateFolderItemDto)
+  items!: BulkCreateFolderItemDto[];
+}
