@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDefined,
   IsIn,
   IsObject,
   IsOptional,
@@ -14,6 +15,7 @@ import { ParentReferenceDto } from '@common/parent-reference.dto.js';
 
 export class CreateTaskDto {
   @ApiProperty({ type: ParentReferenceDto })
+  @IsDefined()
   @ValidateNested()
   @Type(() => ParentReferenceDto)
   parent!: ParentReferenceDto;

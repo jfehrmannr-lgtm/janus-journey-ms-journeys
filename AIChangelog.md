@@ -2,6 +2,16 @@
 
 ## 2026-10-14
 
+### #JANUS-MS-JOURNEYS-0021: Require Bulk and Creation Parent References
+
+**Work**: Plan / Build; Strengthened the ms-journeys creation DTO contract so every Folder, Task, and Journey creation request must include a complete parent reference.
+
+- Added explicit required validation for `parent`, `parent.uid`, and `parent.type` at the DTO boundary.
+- Applied the same requirement to bulk Folder and Task items, returning validation failures as HTTP 400 through the existing global ValidationPipe.
+- Added DTO validation coverage without changing persistence, controllers, BFF, or frontend behavior.
+
+## 2026-10-14
+
 ### #JANUS-MS-JOURNEYS-0020: Allow User Task Bulk Parents
 
 **Work**: Plan / Build; Extended the generic Task bulk creation contract to support direct User associations consistently with single Task creation.

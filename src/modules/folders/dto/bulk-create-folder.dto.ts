@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
+  IsDefined,
   IsArray,
   IsOptional,
   IsString,
@@ -32,6 +33,7 @@ export class BulkCreateFolderItemDto extends CreateFolderDto {
   })
   @ValidateNested()
   @Type(() => ParentReferenceDto)
+  @IsDefined()
   declare parent: ParentReferenceDto;
 }
 

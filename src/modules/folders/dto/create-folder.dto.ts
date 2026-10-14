@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsObject,
+  IsDefined,
   IsOptional,
   IsString,
   Length,
@@ -12,6 +13,7 @@ import { ParentReferenceDto } from '@common/parent-reference.dto.js';
 
 export class CreateFolderDto {
   @ApiProperty({ type: ParentReferenceDto })
+  @IsDefined()
   @ValidateNested()
   @Type(() => ParentReferenceDto)
   parent!: ParentReferenceDto;
