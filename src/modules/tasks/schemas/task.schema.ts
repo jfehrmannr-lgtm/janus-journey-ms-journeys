@@ -20,7 +20,7 @@ export class TaskSchema {
   taskType!: null;
 
   @Prop({
-    enum: ['pending', 'in-progress', 'complete', 'in-pause', 'discarded'],
+    enum: ['pending', 'in-progress', 'completed', 'in-pause', 'discarded'],
     required: true,
     type: String,
   })

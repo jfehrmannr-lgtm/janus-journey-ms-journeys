@@ -12,7 +12,7 @@ domain data in MongoDB.
 - Task parents may be Users, Journeys, or Folders.
 - Unprotected endpoints; authentication and authorization are reserved for a future cross-cutting design.
 - Non-cascading deletes.
-- Confirmed Task states: `pending`, `in-progress`, `complete`, `in-pause`, and `discarded`.
+- Confirmed Task states: `pending`, `in-progress`, `completed`, `in-pause`, and `discarded`.
 - Independent `isVisible` boolean.
 - Progress response shape is defined, but progress calculation is intentionally deferred.
 

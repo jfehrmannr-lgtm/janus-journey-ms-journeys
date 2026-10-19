@@ -8,6 +8,7 @@ describe('UserRootService', () => {
       findByUserId: jest.fn(),
     };
     const foldersRepository = {
+      findByParentUids: jest.fn().mockResolvedValue([]),
       findByJourneyUid: jest.fn(),
       findByUid: jest.fn(),
       findByUserId: jest.fn(),
@@ -44,7 +45,17 @@ describe('UserRootService', () => {
       context.tasksRepository.findByUserId.mockResolvedValue(tasks);
 
       await expect(context.service.findByUserId('user-1')).resolves.toEqual({
-        items: { folders, journeys, tasks },
+        items: {
+          folders: folders.map((folder) => ({
+            ...folder,
+            progress: { completed: 0, discarded: 0, total: 0, percentage: 0 },
+          })),
+          journeys: journeys.map((journey) => ({
+            ...journey,
+            progress: { completed: 0, discarded: 0, total: 0, percentage: 0 },
+          })),
+          tasks,
+        },
         registers,
       });
       expect(context.journeysRepository.findByUserId).toHaveBeenCalledWith(
@@ -96,6 +107,81 @@ describe('UserRootService', () => {
     ]);
   });
 
+  it('calculates root progress across nested folders without duplicating tasks', async () => {
+    const context = createService();
+    const journey = { uid: 'journey-1', type: 'journey' };
+    const rootFolder = {
+      uid: 'folder-root',
+      type: 'folder',
+      parent: { type: 'user', uid: 'user-1' },
+    };
+    const nestedFolder = {
+      uid: 'folder-nested',
+      type: 'folder',
+      parent: { type: 'folder', uid: 'folder-root' },
+    };
+    const journeyFolder = {
+      uid: 'folder-journey',
+      type: 'folder',
+      parent: { type: 'journey', uid: 'journey-1' },
+    };
+    const tasks = [
+      {
+        uid: 'task-complete',
+        parent: { type: 'journey', uid: 'journey-1' },
+        state: 'completed',
+        isVisible: true,
+      },
+      {
+        uid: 'task-discarded',
+        parent: { type: 'folder', uid: 'folder-nested' },
+        state: 'discarded',
+        isVisible: true,
+      },
+      {
+        uid: 'task-pending',
+        parent: { type: 'folder', uid: 'folder-journey' },
+        state: 'pending',
+        isVisible: true,
+      },
+    ];
+    context.journeysRepository.findByUserId.mockResolvedValue([journey]);
+    context.foldersRepository.findByUserId.mockResolvedValue([rootFolder]);
+    context.tasksRepository.findByUserId.mockResolvedValue([]);
+    context.foldersRepository.findByParentUids
+      .mockResolvedValueOnce([nestedFolder, journeyFolder])
+      .mockResolvedValueOnce([]);
+    context.tasksRepository.findByParentUids.mockResolvedValue(tasks);
+
+    await expect(context.service.findByUserId('user-1')).resolves.toMatchObject(
+      {
+        items: {
+          journeys: [
+            {
+              progress: {
+                completed: 1,
+                discarded: 0,
+                total: 2,
+                percentage: 50,
+              },
+            },
+          ],
+          folders: [
+            {
+              progress: {
+                completed: 0,
+                discarded: 1,
+                total: 1,
+                percentage: 100,
+              },
+            },
+          ],
+        },
+      },
+    );
+    expect(context.tasksRepository.findByParentUids).toHaveBeenCalledTimes(1);
+  });
+
   it('returns a Folder with direct Tasks and reuses Task lookup', async () => {
     const context = createService();
     const folder = { uid: 'folder-1', type: 'folder' };
@@ -118,5 +204,41 @@ describe('UserRootService', () => {
       }),
     ).resolves.toEqual({ items: task });
     expect(context.tasksRepository.findByUid).toHaveBeenCalledWith('task-1');
+  });
+
+  it('floors percentage to a whole number', async () => {
+    const context = createService();
+    context.journeysRepository.findByUserId.mockResolvedValue([
+      { uid: 'journey-1', type: 'journey' },
+    ]);
+    context.foldersRepository.findByUserId.mockResolvedValue([]);
+    context.tasksRepository.findByUserId.mockResolvedValue([]);
+    context.foldersRepository.findByParentUids.mockResolvedValue([]);
+    context.tasksRepository.findByParentUids.mockResolvedValue([
+      {
+        uid: 'task-1',
+        parent: { type: 'journey', uid: 'journey-1' },
+        state: 'completed',
+        isVisible: true,
+      },
+      {
+        uid: 'task-2',
+        parent: { type: 'journey', uid: 'journey-1' },
+        state: 'completed',
+        isVisible: true,
+      },
+      {
+        uid: 'task-3',
+        parent: { type: 'journey', uid: 'journey-1' },
+        state: 'pending',
+        isVisible: true,
+      },
+    ]);
+
+    await expect(context.service.findByUserId('user-1')).resolves.toMatchObject(
+      {
+        items: { journeys: [{ progress: { percentage: 66 } }] },
+      },
+    );
   });
 });

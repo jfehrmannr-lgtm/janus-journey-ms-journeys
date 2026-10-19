@@ -22,7 +22,7 @@ export class TaskResponseDto {
   taskType!: null;
 
   @ApiProperty({
-    enum: ['pending', 'in-progress', 'complete', 'in-pause', 'discarded'],
+    enum: ['pending', 'in-progress', 'completed', 'in-pause', 'discarded'],
   })
   state!: TaskState;
 

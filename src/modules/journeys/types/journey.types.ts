@@ -3,7 +3,7 @@ import type { ParentReference } from '@common/parent-reference.js';
 export type EntityType = 'journey' | 'folder' | 'task';
 
 export type TaskState =
-  'pending' | 'in-progress' | 'complete' | 'in-pause' | 'discarded';
+  'pending' | 'in-progress' | 'completed' | 'in-pause' | 'discarded';
 
 export interface Progress {
   completed: number;

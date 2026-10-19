@@ -31,11 +31,11 @@ export class UpdateTaskDto {
   description?: string | null;
 
   @ApiPropertyOptional({
-    enum: ['pending', 'in-progress', 'complete', 'in-pause', 'discarded'],
+    enum: ['pending', 'in-progress', 'completed', 'in-pause', 'discarded'],
   })
   @IsOptional()
-  @IsIn(['pending', 'in-progress', 'complete', 'in-pause', 'discarded'])
-  state?: 'pending' | 'in-progress' | 'complete' | 'in-pause' | 'discarded';
+  @IsIn(['pending', 'in-progress', 'completed', 'in-pause', 'discarded'])
+  state?: 'pending' | 'in-progress' | 'completed' | 'in-pause' | 'discarded';
 
   @ApiPropertyOptional()
   @IsOptional()

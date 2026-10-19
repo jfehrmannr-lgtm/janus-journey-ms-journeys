@@ -1,5 +1,33 @@
 # AI Changelog
 
+## 2026-10-19
+
+### #JANUS-MS-JOURNEYS-0024: Use Floored Progress Percentages
+
+**Work**: Refactor / Validate; Replaced progress percentage rounding with the shared floor-based percentage formula requested for Journey and Folder progress.
+
+- Progress now returns zero for empty resources and otherwise floors `(completed + discarded) / total * 100` to a whole number.
+- Updated shared utility and root-resource regression coverage without changing Task aggregation or response structure.
+
+## 2026-10-19
+
+### #JANUS-MS-JOURNEYS-0023: Share Progress Calculation Utility
+
+**Work**: Refactor / Validate; Extracted root-resource progress calculation into a shared microservice utility for reuse across Journey, Folder, and other application flows.
+
+- Centralized visible-Task filtering, completed/discarded state aggregation, empty-progress handling, and the specified one-decimal percentage rounding rule.
+- Updated UserRootService to consume the shared utility and added direct utility coverage without changing the root response contract.
+
+## 2026-10-19
+
+### #JANUS-MS-JOURNEYS-0022: Calculate Root Resource Progress
+
+**Work**: Plan / Build; Added calculated progress to root Journeys and Folders using descendant Task state aggregation without persisting derived values.
+
+- Reused the established visible-Task progress rules: `completed` and `discarded` count as resolved, discarded Tasks remain in the total, and empty resources return zero progress.
+- Added batched recursive Folder retrieval and a single combined Task lookup so nested descendants are counted once across multiple root resources.
+- Added regression coverage for nested folders, mixed states, empty resources, and duplicate-count prevention while leaving response ordering, registers, persistence, and BFF boundaries unchanged.
+
 ## 2026-10-14
 
 ### #JANUS-MS-JOURNEYS-0021: Require Bulk and Creation Parent References
