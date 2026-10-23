@@ -46,11 +46,11 @@ export class TasksService {
     return this.tasksRepository.update(uid, input, ownerUid);
   }
 
-  remove(uid: string): Promise<void> {
-    return this.tasksRepository.remove(uid);
+  remove(uid: string, ownerUid: string): Promise<void> {
+    return this.tasksRepository.remove(uid, ownerUid);
   }
 
-  deleteBulk(ids: string[]): Promise<void> {
-    return this.tasksRepository.deleteBulk(ids);
+  deleteBulk(ids: string[], ownerUid: string): Promise<void> {
+    return this.tasksRepository.deleteBulk(ids, ownerUid);
   }
 }

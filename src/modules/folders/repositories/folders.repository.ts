@@ -298,13 +298,13 @@ export class FoldersRepository {
     return this.toFolder(document);
   }
 
-  async remove(uid: string): Promise<void> {
+  async remove(uid: string, ownerUid: string): Promise<void> {
     const session = await this.connection.startSession();
 
     try {
       await session.withTransaction(async () => {
         const folder = await this.folderModel
-          .findOne({ uid, type: 'folder' })
+          .findOne({ uid, type: 'folder', ownerUid })
           .session(session)
           .select({ _id: 1 })
           .lean()
@@ -315,17 +315,24 @@ export class FoldersRepository {
         }
 
         await this.taskModel
-          .deleteMany({ 'parent.uid': uid, 'parent.type': 'folder' })
+          .deleteMany({
+            'parent.uid': uid,
+            'parent.type': 'folder',
+            ownerUid,
+          })
           .session(session)
           .exec();
-        await this.folderModel.deleteOne({ uid }).session(session).exec();
+        await this.folderModel
+          .deleteOne({ uid, ownerUid })
+          .session(session)
+          .exec();
       });
     } finally {
       await session.endSession();
     }
   }
 
-  async deleteBulk(ids: string[]): Promise<void> {
+  async deleteBulk(ids: string[], ownerUid: string): Promise<void> {
     const session = await this.connection.startSession();
 
     try {
@@ -333,9 +340,19 @@ export class FoldersRepository {
         const folders = await this.folderModel
           .find({ uid: { $in: ids }, type: 'folder' })
           .session(session)
-          .select({ _id: 0, uid: 1 })
-          .lean<{ uid: string }[]>()
+          .select({ _id: 0, uid: 1, ownerUid: 1 })
+          .lean<Array<{ uid: string; ownerUid: string }>>()
           .exec();
+        const foreignFolders = folders.filter(
+          (folder) => folder.ownerUid !== ownerUid,
+        );
+
+        if (foreignFolders.length > 0) {
+          throw new NotFoundException(
+            `Folder ${foreignFolders[0].uid} was not found`,
+          );
+        }
+
         const folderUids = folders.map((folder) => folder.uid);
 
         if (folderUids.length === 0) return;
@@ -344,11 +361,16 @@ export class FoldersRepository {
           .deleteMany({
             'parent.uid': { $in: folderUids },
             'parent.type': 'folder',
+            ownerUid,
           })
           .session(session)
           .exec();
         await this.folderModel
-          .deleteMany({ uid: { $in: folderUids }, type: 'folder' })
+          .deleteMany({
+            uid: { $in: folderUids },
+            type: 'folder',
+            ownerUid,
+          })
           .session(session)
           .exec();
       });

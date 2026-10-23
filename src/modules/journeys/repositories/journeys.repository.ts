@@ -140,13 +140,13 @@ export class JourneysRepository {
     return this.toJourney(document);
   }
 
-  async remove(uid: string): Promise<void> {
+  async remove(uid: string, ownerUid: string): Promise<void> {
     const session = await this.connection.startSession();
 
     try {
       await session.withTransaction(async () => {
         const journey = await this.journeyModel
-          .findOne({ uid })
+          .findOne({ uid, ownerUid })
           .session(session)
           .select({ _id: 1 })
           .lean()
@@ -157,13 +157,18 @@ export class JourneysRepository {
         }
 
         const folders = await this.folderModel
-          .find({ 'parent.uid': uid, 'parent.type': 'journey' })
+          .find({
+            'parent.uid': uid,
+            'parent.type': 'journey',
+            ownerUid,
+          })
           .session(session)
           .select({ _id: 0, uid: 1 })
           .lean<{ uid: string }[]>()
           .exec();
         await this.taskModel
           .deleteMany({
+            ownerUid,
             $or: [
               { 'parent.uid': uid, 'parent.type': 'journey' },
               {
@@ -177,10 +182,17 @@ export class JourneysRepository {
           .session(session)
           .exec();
         await this.folderModel
-          .deleteMany({ 'parent.uid': uid, 'parent.type': 'journey' })
+          .deleteMany({
+            'parent.uid': uid,
+            'parent.type': 'journey',
+            ownerUid,
+          })
           .session(session)
           .exec();
-        await this.journeyModel.deleteOne({ uid }).session(session).exec();
+        await this.journeyModel
+          .deleteOne({ uid, ownerUid })
+          .session(session)
+          .exec();
       });
     } finally {
       await session.endSession();

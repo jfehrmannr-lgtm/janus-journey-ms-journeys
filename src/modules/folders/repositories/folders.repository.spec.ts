@@ -38,7 +38,7 @@ describe('FoldersRepository deletion', () => {
       connection as never,
     );
 
-    await expect(repository.remove('folder-id')).rejects.toThrow(
+    await expect(repository.remove('folder-id', 'user-1')).rejects.toThrow(
       'delete failed',
     );
     expect(folderModel.deleteOne).not.toHaveBeenCalled();
@@ -195,7 +195,7 @@ describe('FoldersRepository bulk deletion', () => {
   it('deletes Folders and their Tasks in one transaction', async () => {
     const session = createSession();
     const folderModel = {
-      find: jest.fn(() => query([{ uid: 'folder-1' }])),
+      find: jest.fn(() => query([{ uid: 'folder-1', ownerUid: 'user-1' }])),
       deleteMany: jest.fn(() => query({ deletedCount: 1 })),
     };
     const taskModel = {
@@ -208,15 +208,17 @@ describe('FoldersRepository bulk deletion', () => {
       { startSession: jest.fn().mockResolvedValue(session) } as never,
     );
 
-    await repository.deleteBulk(['folder-1', 'folder-missing']);
+    await repository.deleteBulk(['folder-1', 'folder-missing'], 'user-1');
 
     expect(taskModel.deleteMany).toHaveBeenCalledWith({
       'parent.type': 'folder',
       'parent.uid': { $in: ['folder-1'] },
+      ownerUid: 'user-1',
     });
     expect(folderModel.deleteMany).toHaveBeenCalledWith({
       type: 'folder',
       uid: { $in: ['folder-1'] },
+      ownerUid: 'user-1',
     });
     expect(session.withTransaction).toHaveBeenCalledTimes(1);
     expect(session.endSession).toHaveBeenCalledTimes(1);
@@ -236,7 +238,7 @@ describe('FoldersRepository bulk deletion', () => {
       { startSession: jest.fn().mockResolvedValue(session) } as never,
     );
 
-    await repository.deleteBulk(['folder-missing']);
+    await repository.deleteBulk(['folder-missing'], 'user-1');
 
     expect(taskModel.deleteMany).not.toHaveBeenCalled();
     expect(folderModel.deleteMany).not.toHaveBeenCalled();
@@ -246,7 +248,7 @@ describe('FoldersRepository bulk deletion', () => {
   it('does not delete Folders when child deletion fails', async () => {
     const session = createSession();
     const folderModel = {
-      find: jest.fn(() => query([{ uid: 'folder-1' }])),
+      find: jest.fn(() => query([{ uid: 'folder-1', ownerUid: 'user-1' }])),
       deleteMany: jest.fn(),
     };
     const taskModel = {
@@ -259,7 +261,7 @@ describe('FoldersRepository bulk deletion', () => {
       { startSession: jest.fn().mockResolvedValue(session) } as never,
     );
 
-    await expect(repository.deleteBulk(['folder-1'])).rejects.toThrow(
+    await expect(repository.deleteBulk(['folder-1'], 'user-1')).rejects.toThrow(
       'delete failed',
     );
     expect(folderModel.deleteMany).not.toHaveBeenCalled();

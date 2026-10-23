@@ -2,6 +2,16 @@
 
 ## 2026-10-23
 
+### #JANUS-MS-JOURNEYS-0030: Authorize DELETE Resource Ownership
+
+**Work**: Plan / Build / Validate; Applied authenticated ownership enforcement to individual, bulk, and cascading Journey, Folder, and Task deletion flows.
+
+- Individual deletes now use owner-scoped database deletion queries and return 404 for foreign or nonexistent resources.
+- Bulk deletion validates all existing requested resources before deleting; foreign-owned IDs reject the transaction atomically, while nonexistent IDs remain ignored.
+- Cascading deletes restrict descendant discovery and deletion to the authenticated owner without changing deletion responses or DTO contracts.
+
+## 2026-10-23
+
 ### #JANUS-MS-JOURNEYS-0029: Authorize PATCH Resource Ownership
 
 **Work**: Plan / Build / Validate; Applied authenticated ownership checks to Journey, Folder, and Task PATCH operations at both lookup and database update levels.

@@ -108,7 +108,10 @@ export class JourneysController {
   @ApiNotFoundResponse({ description: 'Journey not found' })
   @Delete(':uid')
   @HttpCode(204)
-  async remove(@Param('uid') uid: string): Promise<void> {
-    await this.journeysService.remove(uid);
+  async remove(
+    @Param('uid') uid: string,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<void> {
+    await this.journeysService.remove(uid, ownerUid);
   }
 }

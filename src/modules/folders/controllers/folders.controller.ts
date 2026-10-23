@@ -128,8 +128,11 @@ export class FoldersController {
   @ApiNoContentResponse({ description: 'Folders and their Tasks deleted' })
   @Delete('bulk')
   @HttpCode(204)
-  async deleteBulk(@Body() input: BulkDeleteFoldersDto): Promise<void> {
-    await this.foldersService.deleteBulk(input.ids);
+  async deleteBulk(
+    @Body() input: BulkDeleteFoldersDto,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<void> {
+    await this.foldersService.deleteBulk(input.ids, ownerUid);
   }
 
   @ApiOperation({
@@ -141,7 +144,10 @@ export class FoldersController {
   @ApiNotFoundResponse({ description: 'Folder not found' })
   @Delete(':uid')
   @HttpCode(204)
-  async remove(@Param('uid') uid: string): Promise<void> {
-    await this.foldersService.remove(uid);
+  async remove(
+    @Param('uid') uid: string,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<void> {
+    await this.foldersService.remove(uid, ownerUid);
   }
 }

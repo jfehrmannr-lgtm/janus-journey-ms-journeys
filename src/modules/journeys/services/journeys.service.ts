@@ -42,7 +42,7 @@ export class JourneysService {
     return this.journeysRepository.update(uid, input, ownerUid);
   }
 
-  remove(uid: string): Promise<void> {
-    return this.journeysRepository.remove(uid);
+  remove(uid: string, ownerUid: string): Promise<void> {
+    return this.journeysRepository.remove(uid, ownerUid);
   }
 }

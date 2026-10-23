@@ -174,6 +174,7 @@ describe('TasksRepository bulk deletion', () => {
   it('deletes existing Tasks in one transaction and ignores missing UIDs', async () => {
     const session = createSession();
     const taskModel = {
+      find: jest.fn(() => query([{ uid: 'task-1', ownerUid: 'user-1' }])),
       deleteMany: jest.fn(() => query({ deletedCount: 1 })),
     };
     const repository = new TasksRepository(
@@ -183,11 +184,12 @@ describe('TasksRepository bulk deletion', () => {
       { startSession: jest.fn().mockResolvedValue(session) } as never,
     );
 
-    await repository.deleteBulk(['task-1', 'task-missing']);
+    await repository.deleteBulk(['task-1', 'task-missing'], 'user-1');
 
     expect(taskModel.deleteMany).toHaveBeenCalledWith({
       type: 'task',
-      uid: { $in: ['task-1', 'task-missing'] },
+      uid: { $in: ['task-1'] },
+      ownerUid: 'user-1',
     });
     expect(session.withTransaction).toHaveBeenCalledTimes(1);
     expect(session.endSession).toHaveBeenCalledTimes(1);
@@ -197,6 +199,7 @@ describe('TasksRepository bulk deletion', () => {
     const session = createSession();
     const failure = new Error('delete failed');
     const taskModel = {
+      find: jest.fn(() => query([{ uid: 'task-1', ownerUid: 'user-1' }])),
       deleteMany: jest.fn(() => query(undefined, failure)),
     };
     const repository = new TasksRepository(
@@ -206,7 +209,7 @@ describe('TasksRepository bulk deletion', () => {
       { startSession: jest.fn().mockResolvedValue(session) } as never,
     );
 
-    await expect(repository.deleteBulk(['task-1'])).rejects.toThrow(
+    await expect(repository.deleteBulk(['task-1'], 'user-1')).rejects.toThrow(
       'delete failed',
     );
     expect(session.endSession).toHaveBeenCalledTimes(1);

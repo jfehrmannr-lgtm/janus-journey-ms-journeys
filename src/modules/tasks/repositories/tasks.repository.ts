@@ -315,21 +315,41 @@ export class TasksRepository {
     return this.toTask(document);
   }
 
-  async remove(uid: string): Promise<void> {
-    const result = await this.taskModel.deleteOne({ uid }).exec();
+  async remove(uid: string, ownerUid: string): Promise<void> {
+    const result = await this.taskModel.deleteOne({ uid, ownerUid }).exec();
 
     if (result.deletedCount === 0) {
       throw new NotFoundException(`Task ${uid} was not found`);
     }
   }
 
-  async deleteBulk(ids: string[]): Promise<void> {
+  async deleteBulk(ids: string[], ownerUid: string): Promise<void> {
     const session = await this.connection.startSession();
 
     try {
       await session.withTransaction(async () => {
+        const tasks = await this.taskModel
+          .find({ uid: { $in: ids }, type: 'task' })
+          .session(session)
+          .select({ _id: 0, uid: 1, ownerUid: 1 })
+          .lean<Array<{ uid: string; ownerUid: string }>>()
+          .exec();
+        const foreignTasks = tasks.filter((task) => task.ownerUid !== ownerUid);
+
+        if (foreignTasks.length > 0) {
+          throw new NotFoundException(
+            `Task ${foreignTasks[0].uid} was not found`,
+          );
+        }
+
+        if (tasks.length === 0) return;
+
         await this.taskModel
-          .deleteMany({ uid: { $in: ids }, type: 'task' })
+          .deleteMany({
+            uid: { $in: tasks.map((task) => task.uid) },
+            type: 'task',
+            ownerUid,
+          })
           .session(session)
           .exec();
       });

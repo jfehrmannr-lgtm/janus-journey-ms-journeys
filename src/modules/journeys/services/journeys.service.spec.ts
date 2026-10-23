@@ -17,7 +17,7 @@ describe('JourneysService', () => {
     await service.findAll({ page: 1, size: 20 }, 'user-1');
     await service.findByUid('journey-1', 'user-1');
     await service.update('journey-1', { name: 'Updated' }, 'user-1');
-    await service.remove('journey-1');
+    await service.remove('journey-1', 'user-1');
 
     expect(repository.create).toHaveBeenCalledWith(input, 'user-1');
     expect(repository.findAll).toHaveBeenCalledWith(
@@ -30,6 +30,6 @@ describe('JourneysService', () => {
       { name: 'Updated' },
       'user-1',
     );
-    expect(repository.remove).toHaveBeenCalledWith('journey-1');
+    expect(repository.remove).toHaveBeenCalledWith('journey-1', 'user-1');
   });
 });

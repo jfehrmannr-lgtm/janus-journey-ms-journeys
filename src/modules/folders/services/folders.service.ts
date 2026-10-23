@@ -50,11 +50,11 @@ export class FoldersService {
     return this.foldersRepository.update(uid, input, ownerUid);
   }
 
-  remove(uid: string): Promise<void> {
-    return this.foldersRepository.remove(uid);
+  remove(uid: string, ownerUid: string): Promise<void> {
+    return this.foldersRepository.remove(uid, ownerUid);
   }
 
-  deleteBulk(ids: string[]): Promise<void> {
-    return this.foldersRepository.deleteBulk(ids);
+  deleteBulk(ids: string[], ownerUid: string): Promise<void> {
+    return this.foldersRepository.deleteBulk(ids, ownerUid);
   }
 }

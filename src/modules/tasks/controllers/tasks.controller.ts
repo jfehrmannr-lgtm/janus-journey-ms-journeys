@@ -128,8 +128,11 @@ export class TasksController {
   @ApiNoContentResponse({ description: 'Tasks deleted' })
   @Delete('bulk')
   @HttpCode(204)
-  async deleteBulk(@Body() input: BulkDeleteTasksDto): Promise<void> {
-    await this.tasksService.deleteBulk(input.ids);
+  async deleteBulk(
+    @Body() input: BulkDeleteTasksDto,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<void> {
+    await this.tasksService.deleteBulk(input.ids, ownerUid);
   }
 
   @ApiOperation({
@@ -141,7 +144,10 @@ export class TasksController {
   @ApiNotFoundResponse({ description: 'Task not found' })
   @Delete(':uid')
   @HttpCode(204)
-  async remove(@Param('uid') uid: string): Promise<void> {
-    await this.tasksService.remove(uid);
+  async remove(
+    @Param('uid') uid: string,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<void> {
+    await this.tasksService.remove(uid, ownerUid);
   }
 }

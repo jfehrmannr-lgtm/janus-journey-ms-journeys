@@ -42,7 +42,7 @@ describe('JourneysRepository deletion', () => {
       connection as never,
     );
 
-    await expect(repository.remove('journey-id')).rejects.toThrow(
+    await expect(repository.remove('journey-id', 'user-1')).rejects.toThrow(
       'delete failed',
     );
     expect(folderModel.deleteMany).not.toHaveBeenCalled();
