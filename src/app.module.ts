@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
+import { InternalAuthGuard } from './auth/internal-auth.guard.js';
 import { validateEnvironment } from './config/configuration.js';
 import { FoldersModule } from './modules/folders/folders.module.js';
 import { JourneysModule } from './modules/journeys/journeys.module.js';
@@ -28,6 +30,12 @@ import { UserRootModule } from './modules/user-root/user-root.module.js';
     FoldersModule,
     TasksModule,
     UserRootModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: InternalAuthGuard,
+    },
   ],
 })
 export class AppModule {}

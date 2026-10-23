@@ -16,12 +16,41 @@ describe('Journeys API (e2e)', () => {
   let app: INestApplication;
   let mongo: MongoMemoryReplSet;
 
+  const authenticatedRequest = () => ({
+    delete: (path: string) =>
+      request(app.getHttpServer())
+        .delete(path)
+        .set('X-API-Key', 'test-ms-journeys-api-key')
+        .set('X-User-Id', 'user-e2e'),
+    get: (path: string) =>
+      request(app.getHttpServer())
+        .get(path)
+        .set('X-API-Key', 'test-ms-journeys-api-key')
+        .set('X-User-Id', 'user-e2e'),
+    patch: (path: string) =>
+      request(app.getHttpServer())
+        .patch(path)
+        .set('X-API-Key', 'test-ms-journeys-api-key')
+        .set('X-User-Id', 'user-e2e'),
+    post: (path: string) =>
+      request(app.getHttpServer())
+        .post(path)
+        .set('X-API-Key', 'test-ms-journeys-api-key')
+        .set('X-User-Id', 'user-e2e'),
+    put: (path: string) =>
+      request(app.getHttpServer())
+        .put(path)
+        .set('X-API-Key', 'test-ms-journeys-api-key')
+        .set('X-User-Id', 'user-e2e'),
+  });
+
   beforeAll(async () => {
     mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     process.env.MONGODB_URI = mongo.getUri();
     process.env.MONGODB_DATABASE_NAME = 'janus_journey_test';
     process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS = '5000';
     process.env.PORT = '4002';
+    process.env.MS_JOURNEYS_API_KEY = 'test-ms-journeys-api-key';
 
     const { AppModule } = await import('../src/app.module.js');
     const moduleFixture = await Test.createTestingModule({
@@ -46,17 +75,34 @@ describe('Journeys API (e2e)', () => {
     await mongo.stop();
   });
 
-  it('allows requests without an authentication header', async () => {
+  it('rejects business requests without internal authentication headers', async () => {
     await request(app.getHttpServer())
       .get('/journeys?page=1&size=20')
-      .expect(200);
+      .expect(401);
+  });
+
+  it('allows business requests with valid internal authentication headers', async () => {
+    await authenticatedRequest().get('/journeys?page=1&size=20').expect(200);
+  });
+
+  it('rejects invalid API keys and user identities with HTTP 401', async () => {
+    await request(app.getHttpServer())
+      .get('/journeys?page=1&size=20')
+      .set('X-API-Key', 'invalid-key')
+      .set('X-User-Id', 'user-e2e')
+      .expect(401);
+    await request(app.getHttpServer())
+      .get('/journeys?page=1&size=20')
+      .set('X-API-Key', 'test-ms-journeys-api-key')
+      .set('X-User-Id', '   ')
+      .expect(401);
   });
 
   it.each([1, 50, 200, 201, 2000, 40000])(
     'accepts collection size=%i for all resources',
     async (size) => {
       for (const resource of ['journeys', 'folders', 'tasks']) {
-        await request(app.getHttpServer())
+        await authenticatedRequest()
           .get(`/${resource}?page=1&size=${size}`)
           .expect(200);
       }
@@ -67,7 +113,7 @@ describe('Journeys API (e2e)', () => {
     'rejects invalid collection size=%s for all resources',
     async (size) => {
       for (const resource of ['journeys', 'folders', 'tasks']) {
-        await request(app.getHttpServer())
+        await authenticatedRequest()
           .get(`/${resource}?page=1&size=${size}`)
           .expect(400);
       }
@@ -75,7 +121,7 @@ describe('Journeys API (e2e)', () => {
   );
 
   it('creates and reads a Journey, Folder, and Task hierarchy', async () => {
-    const journeyResponse = await request(app.getHttpServer())
+    const journeyResponse = await authenticatedRequest()
       .post('/journeys')
       .send({
         description: null,
@@ -94,7 +140,7 @@ describe('Journeys API (e2e)', () => {
     });
 
     const journeyUid = (journeyResponse.body as unknown as ResourceBody).uid;
-    const folderResponse = await request(app.getHttpServer())
+    const folderResponse = await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'HTML and CSS',
@@ -103,7 +149,7 @@ describe('Journeys API (e2e)', () => {
       .expect(201);
     const folderUid = (folderResponse.body as unknown as ResourceBody).uid;
 
-    const taskResponse = await request(app.getHttpServer())
+    const taskResponse = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -122,7 +168,7 @@ describe('Journeys API (e2e)', () => {
       type: 'task',
     });
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get('/journeys?page=1&size=20')
       .expect(200)
       .expect((response) =>
@@ -130,7 +176,7 @@ describe('Journeys API (e2e)', () => {
           Array.isArray((response.body as { items: unknown[] }).items),
         ).toBe(true),
       );
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get('/folders?page=1&size=20')
       .expect(200)
       .expect((response) =>
@@ -138,7 +184,7 @@ describe('Journeys API (e2e)', () => {
           Array.isArray((response.body as { items: unknown[] }).items),
         ).toBe(true),
       );
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get('/tasks?page=1&size=20')
       .expect(200)
       .expect((response) =>
@@ -146,14 +192,12 @@ describe('Journeys API (e2e)', () => {
           Array.isArray((response.body as { items: unknown[] }).items),
         ).toBe(true),
       );
-    await request(app.getHttpServer())
-      .get(`/journeys/${journeyUid}`)
-      .expect(200);
-    await request(app.getHttpServer())
+    await authenticatedRequest().get(`/journeys/${journeyUid}`).expect(200);
+    await authenticatedRequest()
       .put(`/folders/${folderUid}`)
       .send({ name: 'Should not be accepted' })
       .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .put(`/tasks/${taskUid}`)
       .send({ name: 'Should not be accepted' })
       .expect(404);
@@ -163,21 +207,21 @@ describe('Journeys API (e2e)', () => {
     const userId = 'user-root-e2e-1';
     const otherUserId = 'user-root-e2e-other';
 
-    const journeyA = await request(app.getHttpServer())
+    const journeyA = await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Journey A',
         parent: { type: 'user', uid: userId },
       })
       .expect(201);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Journey B',
         parent: { type: 'user', uid: userId },
       })
       .expect(201);
-    const nestedFolder = await request(app.getHttpServer())
+    const nestedFolder = await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Nested Folder',
@@ -187,7 +231,7 @@ describe('Journeys API (e2e)', () => {
         },
       })
       .expect(201);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Root Folder Late',
@@ -195,7 +239,7 @@ describe('Journeys API (e2e)', () => {
         parent: { type: 'user', uid: userId },
       })
       .expect(201);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Root Folder Early',
@@ -203,7 +247,7 @@ describe('Journeys API (e2e)', () => {
         parent: { type: 'user', uid: userId },
       })
       .expect(201);
-    const nestedTask = await request(app.getHttpServer())
+    const nestedTask = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -215,7 +259,7 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(201);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -225,7 +269,7 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(201);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -235,7 +279,7 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(201);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Other User Journey',
@@ -243,7 +287,7 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(`/users/${userId}/root`)
       .expect(200)
       .expect((response) => {
@@ -274,7 +318,7 @@ describe('Journeys API (e2e)', () => {
         );
       });
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get('/users/user-root-e2e-empty/root')
       .expect(200)
       .expect({
@@ -284,7 +328,7 @@ describe('Journeys API (e2e)', () => {
   });
 
   it('supports PATCH updates without calculating progress', async () => {
-    const journeyResponse = await request(app.getHttpServer())
+    const journeyResponse = await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Initial Journey',
@@ -293,7 +337,7 @@ describe('Journeys API (e2e)', () => {
       .expect(201);
     const journeyUid = (journeyResponse.body as unknown as ResourceBody).uid;
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .patch(`/journeys/${journeyUid}`)
       .send({ metadata: { reviewed: true }, name: 'Updated Journey' })
       .expect(200)
@@ -303,28 +347,28 @@ describe('Journeys API (e2e)', () => {
         expect(body.name).toBe('Updated Journey');
       });
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .put(`/journeys/${journeyUid}`)
       .send({ name: 'Should not be accepted' })
       .expect(404);
   });
 
   it('validates structured parent types and internal parent existence', async () => {
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Invalid Journey parent',
         parent: { type: 'journey', uid: 'journey-parent' },
       })
       .expect(400);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Invalid Folder parent',
         parent: { type: 'folder', uid: 'folder-parent' },
       })
       .expect(400);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -333,14 +377,14 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(400);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Missing Journey parent',
         parent: { type: 'journey', uid: 'missing-journey-parent' },
       })
       .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -349,12 +393,12 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .post('/journeys')
       .send({ name: 'Obsolete parent field', parentUid: 'user-legacy' })
       .expect(400);
 
-    const journey = await request(app.getHttpServer())
+    const journey = await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Parent update target',
@@ -362,7 +406,7 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
     const journeyUid = (journey.body as unknown as ResourceBody).uid;
-    const folder = await request(app.getHttpServer())
+    const folder = await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Parent update folder',
@@ -370,7 +414,7 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
     const folderUid = (folder.body as unknown as ResourceBody).uid;
-    const task = await request(app.getHttpServer())
+    const task = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -381,26 +425,26 @@ describe('Journeys API (e2e)', () => {
       .expect(201);
     const taskUid = (task.body as unknown as ResourceBody).uid;
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .patch(`/folders/${folderUid}`)
       .send({ parent: { type: 'folder', uid: folderUid } })
       .expect(400);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .patch(`/folders/${folderUid}`)
       .send({ parent: { type: 'journey', uid: 'missing-update-journey' } })
       .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .patch(`/tasks/${taskUid}`)
       .send({ parent: { type: 'task', uid: taskUid } })
       .expect(400);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .patch(`/tasks/${taskUid}`)
       .send({ parent: { type: 'folder', uid: 'missing-update-folder' } })
       .expect(404);
   });
 
-  it('does not apply ownership filtering while authentication is unimplemented', async () => {
-    const response = await request(app.getHttpServer())
+  it('allows authenticated requests without ownership filtering', async () => {
+    const response = await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Unprotected Journey',
@@ -408,13 +452,13 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(`/journeys/${(response.body as unknown as ResourceBody).uid}`)
       .expect(200);
   });
 
   it('cascades Journey deletion and preserves unrelated resources', async () => {
-    const journey = await request(app.getHttpServer())
+    const journey = await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Delete test',
@@ -422,7 +466,7 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
     const journeyBody = journey.body as unknown as ResourceBody;
-    const folder = await request(app.getHttpServer())
+    const folder = await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Child folder',
@@ -430,7 +474,7 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
     const folderBody = folder.body as unknown as ResourceBody;
-    const nestedTask = await request(app.getHttpServer())
+    const nestedTask = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -439,7 +483,7 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(201);
-    const directTask = await request(app.getHttpServer())
+    const directTask = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -448,21 +492,21 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(201);
-    const unrelatedJourney = await request(app.getHttpServer())
+    const unrelatedJourney = await authenticatedRequest()
       .post('/journeys')
       .send({
         name: 'Unrelated journey',
         parent: { type: 'user', uid: 'user-e2e-other' },
       })
       .expect(201);
-    const unrelatedFolder = await request(app.getHttpServer())
+    const unrelatedFolder = await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Unrelated folder',
         parent: { type: 'user', uid: 'user-e2e-other' },
       })
       .expect(201);
-    const unrelatedTask = await request(app.getHttpServer())
+    const unrelatedTask = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -475,40 +519,38 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .delete(`/journeys/${journeyBody.uid}`)
       .expect(204);
 
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(`/journeys/${journeyBody.uid}`)
       .expect(404);
-    await request(app.getHttpServer())
-      .get(`/folders/${folderBody.uid}`)
-      .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest().get(`/folders/${folderBody.uid}`).expect(404);
+    await authenticatedRequest()
       .get(`/tasks/${(nestedTask.body as unknown as ResourceBody).uid}`)
       .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(`/tasks/${(directTask.body as unknown as ResourceBody).uid}`)
       .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(
         `/journeys/${(unrelatedJourney.body as unknown as ResourceBody).uid}`,
       )
       .expect(200);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(`/folders/${(unrelatedFolder.body as unknown as ResourceBody).uid}`)
       .expect(200);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(`/tasks/${(unrelatedTask.body as unknown as ResourceBody).uid}`)
       .expect(200);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .delete('/journeys/missing-journey')
       .expect(404);
   });
 
   it('cascades Folder deletion and preserves unrelated Tasks', async () => {
-    const folder = await request(app.getHttpServer())
+    const folder = await authenticatedRequest()
       .post('/folders')
       .send({
         name: 'Folder to delete',
@@ -516,7 +558,7 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
     const folderUid = (folder.body as unknown as ResourceBody).uid;
-    const childTask = await request(app.getHttpServer())
+    const childTask = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -525,7 +567,7 @@ describe('Journeys API (e2e)', () => {
         state: 'pending',
       })
       .expect(201);
-    const unrelatedTask = await request(app.getHttpServer())
+    const unrelatedTask = await authenticatedRequest()
       .post('/tasks')
       .send({
         isVisible: true,
@@ -535,19 +577,15 @@ describe('Journeys API (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
-      .delete(`/folders/${folderUid}`)
-      .expect(204);
-    await request(app.getHttpServer()).get(`/folders/${folderUid}`).expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest().delete(`/folders/${folderUid}`).expect(204);
+    await authenticatedRequest().get(`/folders/${folderUid}`).expect(404);
+    await authenticatedRequest()
       .get(`/tasks/${(childTask.body as unknown as ResourceBody).uid}`)
       .expect(404);
-    await request(app.getHttpServer())
+    await authenticatedRequest()
       .get(`/tasks/${(unrelatedTask.body as unknown as ResourceBody).uid}`)
       .expect(200);
-    await request(app.getHttpServer())
-      .delete('/folders/missing-folder')
-      .expect(404);
+    await authenticatedRequest().delete('/folders/missing-folder').expect(404);
   });
 
   it('exposes Swagger documentation without authentication requirements', async () => {
@@ -558,7 +596,12 @@ describe('Journeys API (e2e)', () => {
         const document = response.body as {
           components: {
             schemas: Record<string, { properties?: Record<string, unknown> }>;
+            securitySchemes: Record<
+              string,
+              { in?: string; name?: string; type?: string }
+            >;
           };
+          security: Array<Record<string, string[]>>;
           paths: Record<
             string,
             {
@@ -587,6 +630,24 @@ describe('Journeys API (e2e)', () => {
             }
           >;
         };
+
+        expect(document.components.securitySchemes).toEqual({
+          'X-API-Key': {
+            description: 'Internal ms-journeys API key.',
+            in: 'header',
+            name: 'x-api-key',
+            type: 'apiKey',
+          },
+          'X-User-Id': {
+            description: 'Authenticated user identity propagated by the BFF.',
+            in: 'header',
+            name: 'x-user-id',
+            type: 'apiKey',
+          },
+        });
+        expect(document.security).toEqual([
+          { 'X-API-Key': [], 'X-User-Id': [] },
+        ]);
 
         for (const path of ['/journeys', '/folders', '/tasks']) {
           const parameters = document.paths[path]?.get?.parameters ?? [];
