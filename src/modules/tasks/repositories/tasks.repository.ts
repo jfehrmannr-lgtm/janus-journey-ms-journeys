@@ -273,12 +273,16 @@ export class TasksRepository {
     return documents.map((document) => this.toTask(document));
   }
 
-  async update(uid: string, input: UpdateTaskDto): Promise<Task> {
-    const current = await this.findByUid(uid);
+  async update(
+    uid: string,
+    input: UpdateTaskDto,
+    ownerUid: string,
+  ): Promise<Task> {
+    const current = await this.findByUid(uid, ownerUid);
     const update: Record<string, unknown> = {};
 
     if (input.parent !== undefined) {
-      await this.validateParent(input.parent);
+      await this.validateParent(input.parent, ownerUid);
       update.parent = input.parent;
     }
     if (input.name !== undefined) update.name = input.name;
@@ -294,7 +298,7 @@ export class TasksRepository {
 
     const document = await this.taskModel
       .findOneAndUpdate(
-        { uid },
+        { uid, ownerUid },
         { $set: update },
         {
           returnDocument: 'after',

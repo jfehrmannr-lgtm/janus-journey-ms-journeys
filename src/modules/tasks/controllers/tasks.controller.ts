@@ -114,8 +114,9 @@ export class TasksController {
   patch(
     @Param('uid') uid: string,
     @Body() input: UpdateTaskDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<TaskResponseDto> {
-    return this.tasksService.update(uid, input);
+    return this.tasksService.update(uid, input, ownerUid);
   }
 
   @ApiOperation({

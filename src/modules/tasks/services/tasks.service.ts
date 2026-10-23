@@ -42,8 +42,8 @@ export class TasksService {
     return this.tasksRepository.findByUid(uid, ownerUid);
   }
 
-  update(uid: string, input: UpdateTaskDto): Promise<Task> {
-    return this.tasksRepository.update(uid, input);
+  update(uid: string, input: UpdateTaskDto, ownerUid: string): Promise<Task> {
+    return this.tasksRepository.update(uid, input, ownerUid);
   }
 
   remove(uid: string): Promise<void> {

@@ -34,8 +34,12 @@ export class JourneysService {
     return this.journeysRepository.findByUid(uid, ownerUid);
   }
 
-  update(uid: string, input: UpdateJourneyDto): Promise<Journey> {
-    return this.journeysRepository.update(uid, input);
+  update(
+    uid: string,
+    input: UpdateJourneyDto,
+    ownerUid: string,
+  ): Promise<Journey> {
+    return this.journeysRepository.update(uid, input, ownerUid);
   }
 
   remove(uid: string): Promise<void> {

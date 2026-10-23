@@ -42,8 +42,12 @@ export class FoldersService {
     return this.foldersRepository.findByUid(uid, ownerUid);
   }
 
-  update(uid: string, input: UpdateFolderDto): Promise<Folder> {
-    return this.foldersRepository.update(uid, input);
+  update(
+    uid: string,
+    input: UpdateFolderDto,
+    ownerUid: string,
+  ): Promise<Folder> {
+    return this.foldersRepository.update(uid, input, ownerUid);
   }
 
   remove(uid: string): Promise<void> {

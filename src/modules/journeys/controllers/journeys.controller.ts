@@ -92,8 +92,9 @@ export class JourneysController {
   patch(
     @Param('uid') uid: string,
     @Body() input: UpdateJourneyDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<JourneyResponseDto> {
-    return this.journeysService.update(uid, input);
+    return this.journeysService.update(uid, input, ownerUid);
   }
 
   @ApiOperation({

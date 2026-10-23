@@ -101,12 +101,16 @@ export class JourneysRepository {
     return documents.map((document) => this.toJourney(document));
   }
 
-  async update(uid: string, input: UpdateJourneyDto): Promise<Journey> {
-    const current = await this.findByUid(uid);
+  async update(
+    uid: string,
+    input: UpdateJourneyDto,
+    ownerUid: string,
+  ): Promise<Journey> {
+    const current = await this.findByUid(uid, ownerUid);
     const update: Record<string, unknown> = {};
 
     if (input.parent !== undefined) {
-      this.validateParent(input.parent);
+      this.validateParent(input.parent, ownerUid);
       update.parent = input.parent;
     }
     if (input.name !== undefined) update.name = input.name;
@@ -119,7 +123,7 @@ export class JourneysRepository {
 
     const document = await this.journeyModel
       .findOneAndUpdate(
-        { uid },
+        { uid, ownerUid },
         { $set: update },
         {
           returnDocument: 'after',
@@ -210,9 +214,13 @@ export class JourneysRepository {
     }
   }
 
-  private validateParent(parent: ParentReference): void {
+  private validateParent(parent: ParentReference, ownerUid?: string): void {
     if (parent.type !== 'user') {
       throw new BadRequestException('Journey parent must be a User');
+    }
+
+    if (ownerUid !== undefined && parent.uid !== ownerUid) {
+      throw new NotFoundException(`User ${parent.uid} was not found`);
     }
   }
 

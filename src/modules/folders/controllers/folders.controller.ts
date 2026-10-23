@@ -112,8 +112,9 @@ export class FoldersController {
   patch(
     @Param('uid') uid: string,
     @Body() input: UpdateFolderDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<FolderResponseDto> {
-    return this.foldersService.update(uid, input);
+    return this.foldersService.update(uid, input, ownerUid);
   }
 
   @ApiOperation({

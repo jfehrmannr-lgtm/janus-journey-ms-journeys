@@ -2,6 +2,16 @@
 
 ## 2026-10-23
 
+### #JANUS-MS-JOURNEYS-0029: Authorize PATCH Resource Ownership
+
+**Work**: Plan / Build / Validate; Applied authenticated ownership checks to Journey, Folder, and Task PATCH operations at both lookup and database update levels.
+
+- PATCH updates now require owner-scoped resource queries and owner-scoped `findOneAndUpdate` filters, returning 404 for foreign or nonexistent resources.
+- Parent changes validate allowed hierarchy and owner-scoped parent existence; `ownerUid` remains immutable and client attempts are rejected by the existing validation boundary.
+- No bulk-update endpoints exist in `ms-journeys`; existing PATCH contracts and hierarchy behavior remain unchanged.
+
+## 2026-10-23
+
 ### #JANUS-MS-JOURNEYS-0028: Assign Ownership on POST Resources
 
 **Work**: Plan / Build / Validate; Added server-controlled ownership assignment and parent ownership checks to individual and bulk Journey, Folder, and Task creation.

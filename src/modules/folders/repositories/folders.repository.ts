@@ -258,12 +258,16 @@ export class FoldersRepository {
     return documents.map((document) => this.toFolder(document));
   }
 
-  async update(uid: string, input: UpdateFolderDto): Promise<Folder> {
-    const current = await this.findByUid(uid);
+  async update(
+    uid: string,
+    input: UpdateFolderDto,
+    ownerUid: string,
+  ): Promise<Folder> {
+    const current = await this.findByUid(uid, ownerUid);
     const update: Record<string, unknown> = {};
 
     if (input.parent !== undefined) {
-      await this.validateParent(input.parent);
+      await this.validateParent(input.parent, ownerUid);
       update.parent = input.parent;
     }
     if (input.name !== undefined) update.name = input.name;
@@ -277,7 +281,7 @@ export class FoldersRepository {
 
     const document = await this.folderModel
       .findOneAndUpdate(
-        { uid },
+        { uid, ownerUid },
         { $set: update },
         {
           returnDocument: 'after',
