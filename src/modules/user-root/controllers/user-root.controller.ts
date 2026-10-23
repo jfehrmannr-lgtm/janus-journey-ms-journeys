@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Headers, Param } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiExtraModels,
@@ -53,8 +53,9 @@ export class UserRootController {
   @Get('resources/:resourceType/:resourceId')
   findResource(
     @Param() params: ResourceParamsDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<ResourceResponseDto> {
-    return this.userRootService.findResource(params);
+    return this.userRootService.findResource(params, ownerUid);
   }
 
   @ApiOperation({
@@ -74,8 +75,9 @@ export class UserRootController {
   })
   @Get(':userId/root')
   findByUserId(
-    @Param() params: UserRootParamsDto,
+    @Param() _params: UserRootParamsDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<UserRootResponseDto> {
-    return this.userRootService.findByUserId(params.userId);
+    return this.userRootService.findByUserId(ownerUid);
   }
 }

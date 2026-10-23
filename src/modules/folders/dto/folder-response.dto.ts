@@ -6,6 +6,9 @@ export class FolderResponseDto {
   @ApiProperty()
   uid!: string;
 
+  @ApiProperty()
+  ownerUid!: string;
+
   @ApiProperty({ enum: ['folder'] })
   type!: 'folder';
 

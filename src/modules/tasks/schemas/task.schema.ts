@@ -38,6 +38,14 @@ export class TaskSchema {
   @Prop({ required: true, type: String, unique: true })
   uid!: string;
 
+  @Prop({
+    index: true,
+    immutable: true,
+    required: true,
+    type: String,
+  })
+  ownerUid!: string;
+
   @Prop({ default: 'task', enum: ['task'], required: true, type: String })
   type!: 'task';
 

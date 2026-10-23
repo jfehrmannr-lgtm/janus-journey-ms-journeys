@@ -30,5 +30,46 @@ export const setupSwagger = (app: INestApplication): void => {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+
+  const operationKeys = [
+    'delete',
+    'get',
+    'head',
+    'options',
+    'patch',
+    'post',
+    'put',
+    'trace',
+  ] as const;
+
+  for (const pathItem of Object.values(document.paths)) {
+    if (!pathItem) continue;
+
+    if (pathItem.parameters) {
+      pathItem.parameters = pathItem.parameters.filter(
+        (parameter) =>
+          !(
+            'in' in parameter &&
+            parameter.in === 'header' &&
+            parameter.name === 'x-user-id'
+          ),
+      );
+    }
+
+    for (const operationKey of operationKeys) {
+      const operation = pathItem[operationKey];
+      if (!operation?.parameters) continue;
+
+      operation.parameters = operation.parameters.filter(
+        (parameter) =>
+          !(
+            'in' in parameter &&
+            parameter.in === 'header' &&
+            parameter.name === 'x-user-id'
+          ),
+      );
+    }
+  }
+
   SwaggerModule.setup('docs', app, document);
 };

@@ -24,15 +24,21 @@ export class FoldersService {
     return this.foldersRepository.bulkCreate(inputs);
   }
 
-  findAll(query: PaginationQueryDto): Promise<CollectionResult<Folder>> {
-    return this.foldersRepository.findAll({
-      ...query,
-      size: effectivePageSize(query.size),
-    });
+  findAll(
+    query: PaginationQueryDto,
+    ownerUid: string,
+  ): Promise<CollectionResult<Folder>> {
+    return this.foldersRepository.findAll(
+      {
+        ...query,
+        size: effectivePageSize(query.size),
+      },
+      ownerUid,
+    );
   }
 
-  findByUid(uid: string): Promise<Folder> {
-    return this.foldersRepository.findByUid(uid);
+  findByUid(uid: string, ownerUid: string): Promise<Folder> {
+    return this.foldersRepository.findByUid(uid, ownerUid);
   }
 
   update(uid: string, input: UpdateFolderDto): Promise<Folder> {

@@ -1,5 +1,25 @@
 # AI Changelog
 
+## 2026-10-23
+
+### #JANUS-MS-JOURNEYS-0027: Remove Duplicate Swagger User Header
+
+**Work**: Plan / Build / Validate; Removed the generated per-operation `x-user-id` header parameter from Swagger while retaining the existing security-scheme authorization flow.
+
+- Swagger Authorize remains the source for both `X-API-Key` and `X-User-Id` headers.
+- Runtime `@Headers('x-user-id')` extraction, `InternalAuthGuard`, ownership authorization, and business behavior remain unchanged.
+- Added documentation verification that protected collection operations expose no redundant `x-user-id` parameter.
+
+## 2026-10-23
+
+### #JANUS-MS-JOURNEYS-0026: Authorize GET Resources by Ownership
+
+**Work**: Plan / Build / Validate; Enforced authenticated `X-User-Id` ownership across all Journey, Folder, Task, User Root, pagination, and aggregation GET flows.
+
+- Added owner-scoped repository queries and counts so collections and nested resource responses exclude foreign-owned resources.
+- Individual foreign-owned and nonexistent resources now resolve through the existing not-found behavior, returning HTTP 404.
+- Preserved mutation endpoints and the existing internal authentication guard; added focused ownership query coverage and included `ownerUid` in response mappings and Swagger contracts.
+
 ## 2026-10-22
 
 ### #JANUS-MS-JOURNEYS-0025: Add Atomic Bulk Folder and Task Deletion

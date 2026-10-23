@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   Param,
   Patch,
@@ -57,8 +58,9 @@ export class JourneysController {
   @Get()
   findAll(
     @Query() query: PaginationQueryDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<{ items: JourneyResponseDto[]; totalRecords: number }> {
-    return this.journeysService.findAll(query);
+    return this.journeysService.findAll(query, ownerUid);
   }
 
   @ApiOperation({ summary: 'Get a Journey by UID' })
@@ -75,8 +77,9 @@ export class JourneysController {
   @Get(':uid')
   async findByUid(
     @Param('uid') uid: string,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<{ items: JourneyResponseDto }> {
-    return { items: await this.journeysService.findByUid(uid) };
+    return { items: await this.journeysService.findByUid(uid, ownerUid) };
   }
 
   @ApiOperation({ summary: 'Partially update a Journey' })

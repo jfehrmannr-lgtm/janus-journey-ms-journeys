@@ -14,14 +14,17 @@ describe('JourneysService', () => {
     const input = { name: 'Journey', parent: { type: 'user', uid: 'user-1' } };
 
     await service.create(input);
-    await service.findAll({ page: 1, size: 20 });
-    await service.findByUid('journey-1');
+    await service.findAll({ page: 1, size: 20 }, 'user-1');
+    await service.findByUid('journey-1', 'user-1');
     await service.update('journey-1', { name: 'Updated' });
     await service.remove('journey-1');
 
     expect(repository.create).toHaveBeenCalledWith(input);
-    expect(repository.findAll).toHaveBeenCalledWith({ page: 1, size: 20 });
-    expect(repository.findByUid).toHaveBeenCalledWith('journey-1');
+    expect(repository.findAll).toHaveBeenCalledWith(
+      { page: 1, size: 20 },
+      'user-1',
+    );
+    expect(repository.findByUid).toHaveBeenCalledWith('journey-1', 'user-1');
     expect(repository.update).toHaveBeenCalledWith('journey-1', {
       name: 'Updated',
     });

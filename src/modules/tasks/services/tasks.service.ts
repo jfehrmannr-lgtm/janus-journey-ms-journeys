@@ -24,15 +24,21 @@ export class TasksService {
     return this.tasksRepository.bulkCreate(inputs);
   }
 
-  findAll(query: PaginationQueryDto): Promise<CollectionResult<Task>> {
-    return this.tasksRepository.findAll({
-      ...query,
-      size: effectivePageSize(query.size),
-    });
+  findAll(
+    query: PaginationQueryDto,
+    ownerUid: string,
+  ): Promise<CollectionResult<Task>> {
+    return this.tasksRepository.findAll(
+      {
+        ...query,
+        size: effectivePageSize(query.size),
+      },
+      ownerUid,
+    );
   }
 
-  findByUid(uid: string): Promise<Task> {
-    return this.tasksRepository.findByUid(uid);
+  findByUid(uid: string, ownerUid: string): Promise<Task> {
+    return this.tasksRepository.findByUid(uid, ownerUid);
   }
 
   update(uid: string, input: UpdateTaskDto): Promise<Task> {

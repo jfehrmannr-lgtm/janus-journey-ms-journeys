@@ -14,6 +14,7 @@ export interface Progress {
 
 export interface Journey {
   uid: string;
+  ownerUid: string;
   type: 'journey';
   parent: ParentReference;
   name: string;
@@ -26,6 +27,7 @@ export interface Journey {
 
 export interface Folder {
   uid: string;
+  ownerUid: string;
   type: 'folder';
   parent: ParentReference;
   name: string;
@@ -39,6 +41,7 @@ export interface Folder {
 
 export interface Task {
   uid: string;
+  ownerUid: string;
   type: 'task';
   parent: ParentReference;
   name: string;

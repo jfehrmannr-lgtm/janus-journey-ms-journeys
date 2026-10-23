@@ -6,6 +6,9 @@ export class TaskResponseDto {
   @ApiProperty()
   uid!: string;
 
+  @ApiProperty()
+  ownerUid!: string;
+
   @ApiProperty({ enum: ['task'] })
   type!: 'task';
 

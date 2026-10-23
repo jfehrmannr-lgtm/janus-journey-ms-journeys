@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   Param,
   Patch,
@@ -76,8 +77,9 @@ export class TasksController {
   @Get()
   findAll(
     @Query() query: PaginationQueryDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<{ items: TaskResponseDto[]; totalRecords: number }> {
-    return this.tasksService.findAll(query);
+    return this.tasksService.findAll(query, ownerUid);
   }
 
   @ApiOperation({ summary: 'Get a Task by UID' })
@@ -94,8 +96,9 @@ export class TasksController {
   @Get(':uid')
   async findByUid(
     @Param('uid') uid: string,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<{ items: TaskResponseDto }> {
-    return { items: await this.tasksService.findByUid(uid) };
+    return { items: await this.tasksService.findByUid(uid, ownerUid) };
   }
 
   @ApiOperation({ summary: 'Partially update a Task' })

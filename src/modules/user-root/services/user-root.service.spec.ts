@@ -60,6 +60,7 @@ describe('UserRootService', () => {
       });
       expect(context.journeysRepository.findByUserId).toHaveBeenCalledWith(
         'user-1',
+        'user-1',
       );
       expect(context.foldersRepository.findByUserId).toHaveBeenCalledWith(
         'user-1',
@@ -86,10 +87,13 @@ describe('UserRootService', () => {
     context.tasksRepository.findByParentUids.mockResolvedValue(tasks);
 
     await expect(
-      context.service.findResource({
-        resourceId: 'journey-1',
-        resourceType: 'journey',
-      }),
+      context.service.findResource(
+        {
+          resourceId: 'journey-1',
+          resourceType: 'journey',
+        },
+        'user-1',
+      ),
     ).resolves.toEqual({
       items: {
         ...journey,
@@ -100,11 +104,14 @@ describe('UserRootService', () => {
         tasks: [tasks[0]],
       },
     });
-    expect(context.tasksRepository.findByParentUids).toHaveBeenCalledWith([
-      { type: 'journey', uid: 'journey-1' },
-      { type: 'folder', uid: 'folder-1' },
-      { type: 'folder', uid: 'folder-2' },
-    ]);
+    expect(context.tasksRepository.findByParentUids).toHaveBeenCalledWith(
+      [
+        { type: 'journey', uid: 'journey-1' },
+        { type: 'folder', uid: 'folder-1' },
+        { type: 'folder', uid: 'folder-2' },
+      ],
+      'user-1',
+    );
   });
 
   it('calculates root progress across nested folders without duplicating tasks', async () => {
@@ -190,20 +197,29 @@ describe('UserRootService', () => {
     context.tasksRepository.findByParentUids.mockResolvedValue([task]);
 
     await expect(
-      context.service.findResource({
-        resourceId: 'folder-1',
-        resourceType: 'folder',
-      }),
+      context.service.findResource(
+        {
+          resourceId: 'folder-1',
+          resourceType: 'folder',
+        },
+        'user-1',
+      ),
     ).resolves.toEqual({ items: { ...folder, tasks: [task] } });
 
     context.tasksRepository.findByUid.mockResolvedValue(task);
     await expect(
-      context.service.findResource({
-        resourceId: 'task-1',
-        resourceType: 'task',
-      }),
+      context.service.findResource(
+        {
+          resourceId: 'task-1',
+          resourceType: 'task',
+        },
+        'user-1',
+      ),
     ).resolves.toEqual({ items: task });
-    expect(context.tasksRepository.findByUid).toHaveBeenCalledWith('task-1');
+    expect(context.tasksRepository.findByUid).toHaveBeenCalledWith(
+      'task-1',
+      'user-1',
+    );
   });
 
   it('floors percentage to a whole number', async () => {

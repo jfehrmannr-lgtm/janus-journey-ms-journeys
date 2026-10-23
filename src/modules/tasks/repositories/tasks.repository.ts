@@ -179,15 +179,18 @@ export class TasksRepository {
     }
   }
 
-  async findAll(query: PaginationQueryDto): Promise<CollectionResult<Task>> {
+  async findAll(
+    query: PaginationQueryDto,
+    ownerUid: string,
+  ): Promise<CollectionResult<Task>> {
     const [documents, totalRecords] = await Promise.all([
       this.taskModel
-        .find()
+        .find({ ownerUid })
         .skip((query.page - 1) * query.size)
         .limit(query.size)
         .lean<TaskSchema[]>()
         .exec(),
-      this.taskModel.countDocuments().exec(),
+      this.taskModel.countDocuments({ ownerUid }).exec(),
     ]);
 
     return {
@@ -196,9 +199,9 @@ export class TasksRepository {
     };
   }
 
-  async findByUid(uid: string): Promise<Task> {
+  async findByUid(uid: string, ownerUid?: string): Promise<Task> {
     const document = await this.taskModel
-      .findOne({ uid })
+      .findOne(ownerUid === undefined ? { uid } : { uid, ownerUid })
       .lean<TaskSchema>()
       .exec();
 
@@ -211,7 +214,11 @@ export class TasksRepository {
 
   async findByUserId(userId: string): Promise<Task[]> {
     const documents = await this.taskModel
-      .find({ 'parent.uid': userId, 'parent.type': 'user' })
+      .find({
+        'parent.uid': userId,
+        'parent.type': 'user',
+        ownerUid: userId,
+      })
       .sort({ orderIndex: 1, uid: 1 })
       .lean<TaskSchema[]>()
       .exec();
@@ -221,11 +228,13 @@ export class TasksRepository {
 
   async findByParentUids(
     parents: Array<{ uid: string; type: 'journey' | 'folder' }>,
+    ownerUid: string,
   ): Promise<Task[]> {
     if (parents.length === 0) return [];
 
     const documents = await this.taskModel
       .find({
+        ownerUid,
         $or: parents.map((parent) => ({
           'parent.uid': parent.uid,
           'parent.type': parent.type,
@@ -307,6 +316,7 @@ export class TasksRepository {
       metadata: document.metadata ?? {},
       name: document.name,
       orderIndex: document.orderIndex,
+      ownerUid: document.ownerUid,
       parent: document.parent,
       state: document.state,
       taskType: null,

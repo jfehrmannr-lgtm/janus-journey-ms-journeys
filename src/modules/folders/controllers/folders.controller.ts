@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   Param,
   Patch,
@@ -74,8 +75,9 @@ export class FoldersController {
   @Get()
   findAll(
     @Query() query: PaginationQueryDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<{ items: FolderResponseDto[]; totalRecords: number }> {
-    return this.foldersService.findAll(query);
+    return this.foldersService.findAll(query, ownerUid);
   }
 
   @ApiOperation({ summary: 'Get a Folder by UID' })
@@ -92,8 +94,9 @@ export class FoldersController {
   @Get(':uid')
   async findByUid(
     @Param('uid') uid: string,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<{ items: FolderResponseDto }> {
-    return { items: await this.foldersService.findByUid(uid) };
+    return { items: await this.foldersService.findByUid(uid, ownerUid) };
   }
 
   @ApiOperation({ summary: 'Partially update a Folder' })

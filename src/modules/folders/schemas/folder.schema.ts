@@ -24,6 +24,14 @@ export class FolderSchema {
   @Prop({ required: true, type: String, unique: true })
   uid!: string;
 
+  @Prop({
+    index: true,
+    immutable: true,
+    required: true,
+    type: String,
+  })
+  ownerUid!: string;
+
   @Prop({ default: 'folder', enum: ['folder'], required: true, type: String })
   type!: 'folder';
 

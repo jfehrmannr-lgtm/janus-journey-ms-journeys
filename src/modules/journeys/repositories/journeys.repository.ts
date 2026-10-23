@@ -53,15 +53,18 @@ export class JourneysRepository {
     }
   }
 
-  async findAll(query: PaginationQueryDto): Promise<CollectionResult<Journey>> {
+  async findAll(
+    query: PaginationQueryDto,
+    ownerUid: string,
+  ): Promise<CollectionResult<Journey>> {
     const [documents, totalRecords] = await Promise.all([
       this.journeyModel
-        .find()
+        .find({ ownerUid })
         .skip((query.page - 1) * query.size)
         .limit(query.size)
         .lean<JourneySchema[]>()
         .exec(),
-      this.journeyModel.countDocuments().exec(),
+      this.journeyModel.countDocuments({ ownerUid }).exec(),
     ]);
 
     return {
@@ -70,9 +73,9 @@ export class JourneysRepository {
     };
   }
 
-  async findByUid(uid: string): Promise<Journey> {
+  async findByUid(uid: string, ownerUid?: string): Promise<Journey> {
     const document = await this.journeyModel
-      .findOne({ uid })
+      .findOne(ownerUid === undefined ? { uid } : { uid, ownerUid })
       .lean<JourneySchema>()
       .exec();
 
@@ -83,9 +86,13 @@ export class JourneysRepository {
     return this.toJourney(document);
   }
 
-  async findByUserId(userId: string): Promise<Journey[]> {
+  async findByUserId(userId: string, ownerUid: string): Promise<Journey[]> {
     const documents = await this.journeyModel
-      .find({ 'parent.uid': userId, 'parent.type': 'user' })
+      .find({
+        'parent.uid': userId,
+        'parent.type': 'user',
+        ownerUid,
+      })
       .sort({ uid: 1 })
       .lean<JourneySchema[]>()
       .exec();
@@ -181,6 +188,7 @@ export class JourneysRepository {
       description: document.description ?? null,
       metadata: document.metadata ?? {},
       name: document.name,
+      ownerUid: document.ownerUid,
       parent: document.parent,
       type: 'journey',
       uid: document.uid,

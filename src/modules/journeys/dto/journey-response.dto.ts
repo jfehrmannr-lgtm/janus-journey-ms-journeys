@@ -19,6 +19,9 @@ export class JourneyResponseDto {
   @ApiProperty()
   uid!: string;
 
+  @ApiProperty()
+  ownerUid!: string;
+
   @ApiProperty({ enum: ['journey'] })
   type!: 'journey';
 

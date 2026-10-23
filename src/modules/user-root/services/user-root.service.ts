@@ -54,7 +54,7 @@ export class UserRootService {
 
   async findByUserId(userId: string): Promise<UserRootResponseDto> {
     const [journeys, folders, tasks] = await Promise.all([
-      this.journeysRepository.findByUserId(userId),
+      this.journeysRepository.findByUserId(userId, userId),
       this.foldersRepository.findByUserId(userId),
       this.tasksRepository.findByUserId(userId),
     ]);
@@ -68,7 +68,10 @@ export class UserRootService {
         uid: folder.uid,
       })),
     ];
-    const descendantFolders = await this.findDescendantFolders(folderParents);
+    const descendantFolders = await this.findDescendantFolders(
+      folderParents,
+      userId,
+    );
     const allFolders = [...folders, ...descendantFolders];
     const taskParents = [
       ...journeys.map((journey) => ({
@@ -81,7 +84,7 @@ export class UserRootService {
       })),
     ];
     const progressTasks =
-      (await this.tasksRepository.findByParentUids(taskParents)) ?? [];
+      (await this.tasksRepository.findByParentUids(taskParents, userId)) ?? [];
     const foldersByParent = this.groupFoldersByParent(allFolders);
     const tasksByParent = this.groupTasksByParent(progressTasks);
     const foldersWithProgress = folders.map((folder) => ({
@@ -117,6 +120,7 @@ export class UserRootService {
 
   private async findDescendantFolders(
     parents: Array<{ uid: string; type: 'journey' | 'folder' }>,
+    ownerUid: string,
   ): Promise<Folder[]> {
     const folders: Folder[] = [];
     let pending = parents;
@@ -124,7 +128,8 @@ export class UserRootService {
 
     while (pending.length > 0) {
       const children =
-        (await this.foldersRepository.findByParentUids(pending)) ?? [];
+        (await this.foldersRepository.findByParentUids(pending, ownerUid)) ??
+        [];
       pending = children
         .filter((folder) => !seen.has(folder.uid))
         .map((folder) => ({ type: 'folder' as const, uid: folder.uid }));
@@ -160,22 +165,32 @@ export class UserRootService {
     return grouped;
   }
 
-  async findResource(params: ResourceParamsDto): Promise<ResourceResponseDto> {
+  async findResource(
+    params: ResourceParamsDto,
+    ownerUid: string,
+  ): Promise<ResourceResponseDto> {
     if (params.resourceType === 'journey') {
       const journey = await this.journeysRepository.findByUid(
         params.resourceId,
+        ownerUid,
       );
       const folders = sortByOrderIndex(
-        await this.foldersRepository.findByJourneyUid(params.resourceId),
+        await this.foldersRepository.findByJourneyUid(
+          params.resourceId,
+          ownerUid,
+        ),
       );
       const tasks = sortByOrderIndex(
-        await this.tasksRepository.findByParentUids([
-          { type: 'journey', uid: params.resourceId },
-          ...folders.map((folder) => ({
-            type: 'folder' as const,
-            uid: folder.uid,
-          })),
-        ]),
+        await this.tasksRepository.findByParentUids(
+          [
+            { type: 'journey', uid: params.resourceId },
+            ...folders.map((folder) => ({
+              type: 'folder' as const,
+              uid: folder.uid,
+            })),
+          ],
+          ownerUid,
+        ),
       );
       const tasksByFolderUid = new Map<string, typeof tasks>();
 
@@ -199,17 +214,24 @@ export class UserRootService {
     }
 
     if (params.resourceType === 'folder') {
-      const folder = await this.foldersRepository.findByUid(params.resourceId);
+      const folder = await this.foldersRepository.findByUid(
+        params.resourceId,
+        ownerUid,
+      );
       const tasks = sortByOrderIndex(
-        await this.tasksRepository.findByParentUids([
-          { type: 'folder', uid: params.resourceId },
-        ]),
+        await this.tasksRepository.findByParentUids(
+          [{ type: 'folder', uid: params.resourceId }],
+          ownerUid,
+        ),
       );
 
       return { items: { ...folder, tasks } };
     }
 
-    const task = await this.tasksRepository.findByUid(params.resourceId);
+    const task = await this.tasksRepository.findByUid(
+      params.resourceId,
+      ownerUid,
+    );
     return { items: task };
   }
 }

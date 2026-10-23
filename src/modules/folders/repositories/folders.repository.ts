@@ -151,15 +151,18 @@ export class FoldersRepository {
     }
   }
 
-  async findAll(query: PaginationQueryDto): Promise<CollectionResult<Folder>> {
+  async findAll(
+    query: PaginationQueryDto,
+    ownerUid: string,
+  ): Promise<CollectionResult<Folder>> {
     const [documents, totalRecords] = await Promise.all([
       this.folderModel
-        .find()
+        .find({ ownerUid })
         .skip((query.page - 1) * query.size)
         .limit(query.size)
         .lean<FolderSchema[]>()
         .exec(),
-      this.folderModel.countDocuments().exec(),
+      this.folderModel.countDocuments({ ownerUid }).exec(),
     ]);
 
     return {
@@ -168,9 +171,9 @@ export class FoldersRepository {
     };
   }
 
-  async findByUid(uid: string): Promise<Folder> {
+  async findByUid(uid: string, ownerUid?: string): Promise<Folder> {
     const document = await this.folderModel
-      .findOne({ uid })
+      .findOne(ownerUid === undefined ? { uid } : { uid, ownerUid })
       .lean<FolderSchema>()
       .exec();
 
@@ -183,7 +186,11 @@ export class FoldersRepository {
 
   async findByUserId(userId: string): Promise<Folder[]> {
     const documents = await this.folderModel
-      .find({ 'parent.uid': userId, 'parent.type': 'user' })
+      .find({
+        'parent.uid': userId,
+        'parent.type': 'user',
+        ownerUid: userId,
+      })
       .sort({ orderIndex: 1, uid: 1 })
       .lean<FolderSchema[]>()
       .exec();
@@ -191,9 +198,16 @@ export class FoldersRepository {
     return documents.map((document) => this.toFolder(document));
   }
 
-  async findByJourneyUid(journeyUid: string): Promise<Folder[]> {
+  async findByJourneyUid(
+    journeyUid: string,
+    ownerUid: string,
+  ): Promise<Folder[]> {
     const documents = await this.folderModel
-      .find({ 'parent.uid': journeyUid, 'parent.type': 'journey' })
+      .find({
+        'parent.uid': journeyUid,
+        'parent.type': 'journey',
+        ownerUid,
+      })
       .sort({ orderIndex: 1, uid: 1 })
       .lean<FolderSchema[]>()
       .exec();
@@ -203,11 +217,13 @@ export class FoldersRepository {
 
   async findByParentUids(
     parents: Array<{ uid: string; type: 'journey' | 'folder' }>,
+    ownerUid: string,
   ): Promise<Folder[]> {
     if (parents.length === 0) return [];
 
     const documents = await this.folderModel
       .find({
+        ownerUid,
         $or: parents.map((parent) => ({
           'parent.uid': parent.uid,
           'parent.type': parent.type,
@@ -322,6 +338,7 @@ export class FoldersRepository {
       metadata: document.metadata ?? {},
       name: document.name,
       orderIndex: document.orderIndex,
+      ownerUid: document.ownerUid,
       parent: document.parent,
       type: 'folder',
       uid: document.uid,

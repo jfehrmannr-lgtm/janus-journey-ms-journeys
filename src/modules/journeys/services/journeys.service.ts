@@ -17,15 +17,21 @@ export class JourneysService {
     return this.journeysRepository.create(input);
   }
 
-  findAll(query: PaginationQueryDto): Promise<CollectionResult<Journey>> {
-    return this.journeysRepository.findAll({
-      ...query,
-      size: effectivePageSize(query.size),
-    });
+  findAll(
+    query: PaginationQueryDto,
+    ownerUid: string,
+  ): Promise<CollectionResult<Journey>> {
+    return this.journeysRepository.findAll(
+      {
+        ...query,
+        size: effectivePageSize(query.size),
+      },
+      ownerUid,
+    );
   }
 
-  findByUid(uid: string): Promise<Journey> {
-    return this.journeysRepository.findByUid(uid);
+  findByUid(uid: string, ownerUid: string): Promise<Journey> {
+    return this.journeysRepository.findByUid(uid, ownerUid);
   }
 
   update(uid: string, input: UpdateJourneyDto): Promise<Journey> {

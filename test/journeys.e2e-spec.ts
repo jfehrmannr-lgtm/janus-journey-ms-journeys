@@ -658,6 +658,12 @@ describe('Journeys API (e2e)', () => {
             ]),
           );
           expect(parameters).toHaveLength(2);
+          expect(
+            parameters.some(
+              (parameter) =>
+                parameter.in === 'header' && parameter.name === 'x-user-id',
+            ),
+          ).toBe(false);
           const sizeParameter = parameters.find(
             (parameter) => parameter.name === 'size',
           );
