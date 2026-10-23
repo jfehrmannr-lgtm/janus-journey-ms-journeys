@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { BulkCreateTasksDto } from '../dto/bulk-create-task.dto.js';
 import { BulkCreateTasksResponseDto } from '../dto/bulk-create-task-response.dto.js';
+import { BulkDeleteTasksDto } from '../dto/bulk-delete-task.dto.js';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
 import { TaskResponseDto } from '../dto/task-response.dto.js';
 import { UpdateTaskDto } from '../dto/update-task.dto.js';
@@ -106,6 +107,19 @@ export class TasksController {
     @Body() input: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
     return this.tasksService.update(uid, input);
+  }
+
+  @ApiOperation({
+    summary: 'Bulk delete Tasks',
+    description:
+      'Deletes the requested Tasks in one transaction. Missing Task UIDs are ignored.',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid bulk Task deletion payload' })
+  @ApiNoContentResponse({ description: 'Tasks deleted' })
+  @Delete('bulk')
+  @HttpCode(204)
+  async deleteBulk(@Body() input: BulkDeleteTasksDto): Promise<void> {
+    await this.tasksService.deleteBulk(input.ids);
   }
 
   @ApiOperation({

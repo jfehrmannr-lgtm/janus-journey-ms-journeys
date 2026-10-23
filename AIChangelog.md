@@ -1,5 +1,16 @@
 # AI Changelog
 
+## 2026-10-22
+
+### #JANUS-MS-JOURNEYS-0025: Add Atomic Bulk Folder and Task Deletion
+
+**Work**: Plan / Build / Validate; Added validated, idempotent bulk deletion endpoints for Folders and Tasks while preserving existing authorization boundaries and single-resource deletion behavior.
+
+- Added DTO validation rejecting empty, duplicate, non-string, and malformed resource ID arrays.
+- Added transactional Folder deletion with cascading removal of directly owned Tasks, plus transactional Task deletion.
+- Missing resource IDs are ignored, and transaction failures propagate without committing partial deletion work.
+- Added controller, repository, cascade, idempotency, and failure-path coverage; Journey deletion and BFF/frontend contracts remain unchanged.
+
 ## 2026-10-19
 
 ### #JANUS-MS-JOURNEYS-0024: Use Floored Progress Percentages

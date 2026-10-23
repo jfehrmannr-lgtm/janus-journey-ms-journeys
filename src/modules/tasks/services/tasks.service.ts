@@ -42,4 +42,8 @@ export class TasksService {
   remove(uid: string): Promise<void> {
     return this.tasksRepository.remove(uid);
   }
+
+  deleteBulk(ids: string[]): Promise<void> {
+    return this.tasksRepository.deleteBulk(ids);
+  }
 }

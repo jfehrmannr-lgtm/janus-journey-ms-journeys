@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { type Connection, type Model } from 'mongoose';
 import { randomUUID } from 'node:crypto';
 import { BulkCreateTaskItemDto } from '../dto/bulk-create-task.dto.js';
 import { CreateTaskDto } from '../dto/create-task.dto.js';
@@ -33,6 +33,8 @@ export class TasksRepository {
     private readonly journeyModel: Model<JourneyDocument>,
     @InjectModel(FolderSchema.name)
     private readonly folderModel: Model<FolderDocument>,
+    @InjectConnection()
+    private readonly connection: Connection,
   ) {}
 
   async create(input: CreateTaskDto): Promise<Task> {
@@ -279,6 +281,21 @@ export class TasksRepository {
 
     if (result.deletedCount === 0) {
       throw new NotFoundException(`Task ${uid} was not found`);
+    }
+  }
+
+  async deleteBulk(ids: string[]): Promise<void> {
+    const session = await this.connection.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        await this.taskModel
+          .deleteMany({ uid: { $in: ids }, type: 'task' })
+          .session(session)
+          .exec();
+      });
+    } finally {
+      await session.endSession();
     }
   }
 

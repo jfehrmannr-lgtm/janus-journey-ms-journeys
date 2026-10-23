@@ -1,10 +1,13 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { TasksRepository } from './tasks.repository.js';
 
-const query = <T>(result: T) => ({
-  exec: jest.fn().mockResolvedValue(result),
+const query = <T>(result: T, error?: Error) => ({
+  exec: error
+    ? jest.fn().mockRejectedValue(error)
+    : jest.fn().mockResolvedValue(result),
   lean: jest.fn().mockReturnThis(),
   select: jest.fn().mockReturnThis(),
+  session: jest.fn().mockReturnThis(),
 });
 
 describe('TasksRepository bulk creation', () => {
@@ -24,6 +27,7 @@ describe('TasksRepository bulk creation', () => {
       taskModel as never,
       journeyModel as never,
       folderModel as never,
+      {} as never,
     );
 
     const result = await repository.bulkCreate([
@@ -68,6 +72,7 @@ describe('TasksRepository bulk creation', () => {
       taskModel as never,
       {} as never,
       {} as never,
+      {} as never,
     );
 
     await expect(
@@ -92,6 +97,7 @@ describe('TasksRepository bulk creation', () => {
     };
     const repository = new TasksRepository(
       taskModel as never,
+      {} as never,
       {} as never,
       {} as never,
     );
@@ -121,6 +127,7 @@ describe('TasksRepository bulk creation', () => {
       taskModel as never,
       journeyModel as never,
       {} as never,
+      {} as never,
     );
 
     const [result] = await repository.bulkCreate([
@@ -136,5 +143,60 @@ describe('TasksRepository bulk creation', () => {
     expect(taskModel.insertMany.mock.calls[0][0][0]).not.toHaveProperty(
       'clientId',
     );
+  });
+});
+
+describe('TasksRepository bulk deletion', () => {
+  const createSession = () => {
+    const session = {
+      endSession: jest.fn(),
+      withTransaction: jest.fn(),
+    };
+    session.withTransaction.mockImplementation(
+      async (callback: (activeSession: unknown) => Promise<void>) =>
+        callback(session),
+    );
+    return session;
+  };
+
+  it('deletes existing Tasks in one transaction and ignores missing UIDs', async () => {
+    const session = createSession();
+    const taskModel = {
+      deleteMany: jest.fn(() => query({ deletedCount: 1 })),
+    };
+    const repository = new TasksRepository(
+      taskModel as never,
+      {} as never,
+      {} as never,
+      { startSession: jest.fn().mockResolvedValue(session) } as never,
+    );
+
+    await repository.deleteBulk(['task-1', 'task-missing']);
+
+    expect(taskModel.deleteMany).toHaveBeenCalledWith({
+      type: 'task',
+      uid: { $in: ['task-1', 'task-missing'] },
+    });
+    expect(session.withTransaction).toHaveBeenCalledTimes(1);
+    expect(session.endSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates deletion failures so the transaction can roll back', async () => {
+    const session = createSession();
+    const failure = new Error('delete failed');
+    const taskModel = {
+      deleteMany: jest.fn(() => query(undefined, failure)),
+    };
+    const repository = new TasksRepository(
+      taskModel as never,
+      {} as never,
+      {} as never,
+      { startSession: jest.fn().mockResolvedValue(session) } as never,
+    );
+
+    await expect(repository.deleteBulk(['task-1'])).rejects.toThrow(
+      'delete failed',
+    );
+    expect(session.endSession).toHaveBeenCalledTimes(1);
   });
 });

@@ -166,3 +166,91 @@ describe('FoldersRepository bulk creation', () => {
     );
   });
 });
+
+describe('FoldersRepository bulk deletion', () => {
+  const createSession = () => {
+    const session = {
+      endSession: jest.fn(),
+      withTransaction: jest.fn(),
+    };
+    session.withTransaction.mockImplementation(
+      async (callback: (activeSession: unknown) => Promise<void>) =>
+        callback(session),
+    );
+    return session;
+  };
+
+  it('deletes Folders and their Tasks in one transaction', async () => {
+    const session = createSession();
+    const folderModel = {
+      find: jest.fn(() => query([{ uid: 'folder-1' }])),
+      deleteMany: jest.fn(() => query({ deletedCount: 1 })),
+    };
+    const taskModel = {
+      deleteMany: jest.fn(() => query({ deletedCount: 2 })),
+    };
+    const repository = new FoldersRepository(
+      folderModel as never,
+      taskModel as never,
+      {} as never,
+      { startSession: jest.fn().mockResolvedValue(session) } as never,
+    );
+
+    await repository.deleteBulk(['folder-1', 'folder-missing']);
+
+    expect(taskModel.deleteMany).toHaveBeenCalledWith({
+      'parent.type': 'folder',
+      'parent.uid': { $in: ['folder-1'] },
+    });
+    expect(folderModel.deleteMany).toHaveBeenCalledWith({
+      type: 'folder',
+      uid: { $in: ['folder-1'] },
+    });
+    expect(session.withTransaction).toHaveBeenCalledTimes(1);
+    expect(session.endSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing when all Folder UIDs are missing', async () => {
+    const session = createSession();
+    const folderModel = {
+      find: jest.fn(() => query([])),
+      deleteMany: jest.fn(),
+    };
+    const taskModel = { deleteMany: jest.fn() };
+    const repository = new FoldersRepository(
+      folderModel as never,
+      taskModel as never,
+      {} as never,
+      { startSession: jest.fn().mockResolvedValue(session) } as never,
+    );
+
+    await repository.deleteBulk(['folder-missing']);
+
+    expect(taskModel.deleteMany).not.toHaveBeenCalled();
+    expect(folderModel.deleteMany).not.toHaveBeenCalled();
+    expect(session.endSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not delete Folders when child deletion fails', async () => {
+    const session = createSession();
+    const folderModel = {
+      find: jest.fn(() => query([{ uid: 'folder-1' }])),
+      deleteMany: jest.fn(),
+    };
+    const taskModel = {
+      deleteMany: jest.fn(() => query(undefined, new Error('delete failed'))),
+    };
+    const repository = new FoldersRepository(
+      folderModel as never,
+      taskModel as never,
+      {} as never,
+      { startSession: jest.fn().mockResolvedValue(session) } as never,
+    );
+
+    await expect(repository.deleteBulk(['folder-1'])).rejects.toThrow(
+      'delete failed',
+    );
+    expect(folderModel.deleteMany).not.toHaveBeenCalled();
+    expect(session.endSession).toHaveBeenCalledTimes(1);
+  });
+});

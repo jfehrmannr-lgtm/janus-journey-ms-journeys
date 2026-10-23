@@ -283,6 +283,38 @@ export class FoldersRepository {
     }
   }
 
+  async deleteBulk(ids: string[]): Promise<void> {
+    const session = await this.connection.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        const folders = await this.folderModel
+          .find({ uid: { $in: ids }, type: 'folder' })
+          .session(session)
+          .select({ _id: 0, uid: 1 })
+          .lean<{ uid: string }[]>()
+          .exec();
+        const folderUids = folders.map((folder) => folder.uid);
+
+        if (folderUids.length === 0) return;
+
+        await this.taskModel
+          .deleteMany({
+            'parent.uid': { $in: folderUids },
+            'parent.type': 'folder',
+          })
+          .session(session)
+          .exec();
+        await this.folderModel
+          .deleteMany({ uid: { $in: folderUids }, type: 'folder' })
+          .session(session)
+          .exec();
+      });
+    } finally {
+      await session.endSession();
+    }
+  }
+
   private toFolder(document: FolderSchema): Folder {
     return {
       createdAt: document.createdAt,

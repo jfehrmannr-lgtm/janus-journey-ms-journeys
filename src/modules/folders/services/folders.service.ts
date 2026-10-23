@@ -42,4 +42,8 @@ export class FoldersService {
   remove(uid: string): Promise<void> {
     return this.foldersRepository.remove(uid);
   }
+
+  deleteBulk(ids: string[]): Promise<void> {
+    return this.foldersRepository.deleteBulk(ids);
+  }
 }

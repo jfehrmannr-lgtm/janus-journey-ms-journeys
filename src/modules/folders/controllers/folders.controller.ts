@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { BulkCreateFoldersDto } from '../dto/bulk-create-folder.dto.js';
 import { BulkCreateFoldersResponseDto } from '../dto/bulk-create-folder-response.dto.js';
+import { BulkDeleteFoldersDto } from '../dto/bulk-delete-folder.dto.js';
 import { CreateFolderDto } from '../dto/create-folder.dto.js';
 import { FolderResponseDto } from '../dto/folder-response.dto.js';
 import { UpdateFolderDto } from '../dto/update-folder.dto.js';
@@ -104,6 +105,21 @@ export class FoldersController {
     @Body() input: UpdateFolderDto,
   ): Promise<FolderResponseDto> {
     return this.foldersService.update(uid, input);
+  }
+
+  @ApiOperation({
+    summary: 'Bulk delete Folders and their Tasks',
+    description:
+      'Deletes the requested Folders and all Tasks belonging to them in one transaction. Missing Folder UIDs are ignored.',
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid bulk Folder deletion payload',
+  })
+  @ApiNoContentResponse({ description: 'Folders and their Tasks deleted' })
+  @Delete('bulk')
+  @HttpCode(204)
+  async deleteBulk(@Body() input: BulkDeleteFoldersDto): Promise<void> {
+    await this.foldersService.deleteBulk(input.ids);
   }
 
   @ApiOperation({
