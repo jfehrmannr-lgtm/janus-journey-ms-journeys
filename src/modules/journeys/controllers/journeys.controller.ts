@@ -37,8 +37,11 @@ export class JourneysController {
   })
   @ApiResponse({ status: 201, type: JourneyResponseDto })
   @Post()
-  create(@Body() input: CreateJourneyDto): Promise<JourneyResponseDto> {
-    return this.journeysService.create(input);
+  create(
+    @Body() input: CreateJourneyDto,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<JourneyResponseDto> {
+    return this.journeysService.create(input, ownerUid);
   }
 
   @ApiOperation({ summary: 'List Journeys' })

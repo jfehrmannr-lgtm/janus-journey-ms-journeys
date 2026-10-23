@@ -36,8 +36,11 @@ export class TasksController {
   @ApiOperation({ summary: 'Create a Task' })
   @ApiResponse({ status: 201, type: TaskResponseDto })
   @Post()
-  create(@Body() input: CreateTaskDto): Promise<TaskResponseDto> {
-    return this.tasksService.create(input);
+  create(
+    @Body() input: CreateTaskDto,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<TaskResponseDto> {
+    return this.tasksService.create(input, ownerUid);
   }
 
   @ApiOperation({
@@ -56,8 +59,11 @@ export class TasksController {
   @Post('bulk')
   async bulkCreate(
     @Body() input: BulkCreateTasksDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<BulkCreateTasksResponseDto> {
-    return { items: await this.tasksService.bulkCreate(input.items) };
+    return {
+      items: await this.tasksService.bulkCreate(input.items, ownerUid),
+    };
   }
 
   @ApiOperation({ summary: 'List Tasks' })

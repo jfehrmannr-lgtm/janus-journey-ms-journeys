@@ -14,14 +14,15 @@ import {
 export class FoldersService {
   constructor(private readonly foldersRepository: FoldersRepository) {}
 
-  create(input: CreateFolderDto): Promise<Folder> {
-    return this.foldersRepository.create(input);
+  create(input: CreateFolderDto, ownerUid: string): Promise<Folder> {
+    return this.foldersRepository.create(input, ownerUid);
   }
 
   bulkCreate(
     inputs: BulkCreateFolderItemDto[],
+    ownerUid: string,
   ): Promise<Array<{ clientId?: string; resource: Folder }>> {
-    return this.foldersRepository.bulkCreate(inputs);
+    return this.foldersRepository.bulkCreate(inputs, ownerUid);
   }
 
   findAll(

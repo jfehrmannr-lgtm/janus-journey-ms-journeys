@@ -13,8 +13,8 @@ import {
 export class JourneysService {
   constructor(private readonly journeysRepository: JourneysRepository) {}
 
-  create(input: CreateJourneyDto): Promise<Journey> {
-    return this.journeysRepository.create(input);
+  create(input: CreateJourneyDto, ownerUid: string): Promise<Journey> {
+    return this.journeysRepository.create(input, ownerUid);
   }
 
   findAll(

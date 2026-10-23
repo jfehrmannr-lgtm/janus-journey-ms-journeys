@@ -34,8 +34,8 @@ export class FoldersRepository {
     private readonly connection: Connection,
   ) {}
 
-  async create(input: CreateFolderDto): Promise<Folder> {
-    await this.validateParent(input.parent);
+  async create(input: CreateFolderDto, ownerUid: string): Promise<Folder> {
+    await this.validateParent(input.parent, ownerUid);
 
     try {
       const folder = await this.folderModel.create({
@@ -43,6 +43,7 @@ export class FoldersRepository {
         metadata: input.metadata ?? {},
         name: input.name,
         orderIndex: input.orderIndex,
+        ownerUid,
         parent: input.parent,
         type: 'folder',
         uid: `folder-${randomUUID()}`,
@@ -57,6 +58,7 @@ export class FoldersRepository {
 
   async bulkCreate(
     inputs: BulkCreateFolderItemDto[],
+    ownerUid: string,
   ): Promise<Array<{ clientId?: string; resource: Folder }>> {
     this.validateClientIds(inputs);
 
@@ -73,6 +75,21 @@ export class FoldersRepository {
       );
     }
 
+    const foreignUserParentItems = inputs.filter(
+      (input) => input.parent.type === 'user' && input.parent.uid !== ownerUid,
+    );
+
+    if (foreignUserParentItems.length > 0) {
+      throw new NotFoundException(
+        `User parents were not found for bulk Folder items: ${foreignUserParentItems
+          .map(
+            (input) =>
+              `${input.clientId ?? '<unassigned>'} (${input.parent.uid})`,
+          )
+          .join(', ')}`,
+      );
+    }
+
     const journeyUids = [
       ...new Set(
         inputs
@@ -84,7 +101,11 @@ export class FoldersRepository {
       journeyUids.length === 0
         ? []
         : await this.journeyModel
-            .find({ uid: { $in: journeyUids }, type: 'journey' })
+            .find({
+              uid: { $in: journeyUids },
+              type: 'journey',
+              ownerUid,
+            })
             .select({ uid: 1 })
             .lean<{ uid: string }[]>()
             .exec();
@@ -113,6 +134,7 @@ export class FoldersRepository {
         metadata: input.metadata ?? {},
         name: input.name,
         orderIndex: input.orderIndex,
+        ownerUid,
         parent: input.parent,
         type: 'folder' as const,
         uid: `folder-${randomUUID()}`,
@@ -381,15 +403,27 @@ export class FoldersRepository {
     }
   }
 
-  private async validateParent(parent: ParentReference): Promise<void> {
-    if (parent.type === 'user') return;
+  private async validateParent(
+    parent: ParentReference,
+    ownerUid?: string,
+  ): Promise<void> {
+    if (parent.type === 'user') {
+      if (ownerUid !== undefined && parent.uid !== ownerUid) {
+        throw new NotFoundException(`User ${parent.uid} was not found`);
+      }
+      return;
+    }
 
     if (parent.type !== 'journey') {
       throw new BadRequestException('Folder parent must be a User or Journey');
     }
 
     const journey = await this.journeyModel
-      .findOne({ uid: parent.uid, type: 'journey' })
+      .findOne({
+        uid: parent.uid,
+        type: 'journey',
+        ...(ownerUid === undefined ? {} : { ownerUid }),
+      })
       .select({ _id: 1 })
       .lean()
       .exec();

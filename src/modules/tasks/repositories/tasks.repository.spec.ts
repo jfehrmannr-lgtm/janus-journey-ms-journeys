@@ -30,28 +30,34 @@ describe('TasksRepository bulk creation', () => {
       {} as never,
     );
 
-    const result = await repository.bulkCreate([
-      {
-        clientId: 'task-client-journey',
-        isVisible: true,
-        name: 'Journey Task',
-        parent: { type: 'journey', uid: 'journey-1' },
-        state: 'pending',
-      },
-      {
-        clientId: 'task-client-folder',
-        isVisible: false,
-        name: 'Folder Task',
-        parent: { type: 'folder', uid: 'folder-1' },
-        state: 'in-progress',
-      },
-    ]);
+    const result = await repository.bulkCreate(
+      [
+        {
+          clientId: 'task-client-journey',
+          isVisible: true,
+          name: 'Journey Task',
+          parent: { type: 'journey', uid: 'journey-1' },
+          state: 'pending',
+        },
+        {
+          clientId: 'task-client-folder',
+          isVisible: false,
+          name: 'Folder Task',
+          parent: { type: 'folder', uid: 'folder-1' },
+          state: 'in-progress',
+        },
+      ],
+      'user-1',
+    );
 
     expect(taskModel.insertMany).toHaveBeenCalledTimes(1);
     expect(taskModel.insertMany.mock.calls[0][0]).toHaveLength(2);
     expect(taskModel.insertMany.mock.calls[0][0][0]).not.toHaveProperty(
       'clientId',
     );
+    expect(taskModel.insertMany.mock.calls[0][0][0]).toMatchObject({
+      ownerUid: 'user-1',
+    });
     expect(result.map((item) => item.clientId)).toEqual([
       'task-client-journey',
       'task-client-folder',
@@ -102,15 +108,18 @@ describe('TasksRepository bulk creation', () => {
       {} as never,
     );
 
-    const [result] = await repository.bulkCreate([
-      {
-        clientId: 'task-client-user',
-        isVisible: true,
-        name: 'User Task',
-        parent: { type: 'user', uid: 'user-1' },
-        state: 'pending',
-      },
-    ]);
+    const [result] = await repository.bulkCreate(
+      [
+        {
+          clientId: 'task-client-user',
+          isVisible: true,
+          name: 'User Task',
+          parent: { type: 'user', uid: 'user-1' },
+          state: 'pending',
+        },
+      ],
+      'user-1',
+    );
 
     expect(result.resource.parent).toEqual({ type: 'user', uid: 'user-1' });
     expect(taskModel.insertMany).toHaveBeenCalledTimes(1);
@@ -130,14 +139,17 @@ describe('TasksRepository bulk creation', () => {
       {} as never,
     );
 
-    const [result] = await repository.bulkCreate([
-      {
-        isVisible: true,
-        name: 'Uncorrelated Task',
-        parent: { type: 'journey', uid: 'journey-1' },
-        state: 'pending',
-      },
-    ]);
+    const [result] = await repository.bulkCreate(
+      [
+        {
+          isVisible: true,
+          name: 'Uncorrelated Task',
+          parent: { type: 'journey', uid: 'journey-1' },
+          state: 'pending',
+        },
+      ],
+      'user-1',
+    );
 
     expect(result).not.toHaveProperty('clientId');
     expect(taskModel.insertMany.mock.calls[0][0][0]).not.toHaveProperty(

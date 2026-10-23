@@ -36,8 +36,11 @@ export class FoldersController {
   @ApiOperation({ summary: 'Create a Folder' })
   @ApiResponse({ status: 201, type: FolderResponseDto })
   @Post()
-  create(@Body() input: CreateFolderDto): Promise<FolderResponseDto> {
-    return this.foldersService.create(input);
+  create(
+    @Body() input: CreateFolderDto,
+    @Headers('x-user-id') ownerUid: string,
+  ): Promise<FolderResponseDto> {
+    return this.foldersService.create(input, ownerUid);
   }
 
   @ApiOperation({
@@ -54,8 +57,11 @@ export class FoldersController {
   @Post('bulk')
   async bulkCreate(
     @Body() input: BulkCreateFoldersDto,
+    @Headers('x-user-id') ownerUid: string,
   ): Promise<BulkCreateFoldersResponseDto> {
-    return { items: await this.foldersService.bulkCreate(input.items) };
+    return {
+      items: await this.foldersService.bulkCreate(input.items, ownerUid),
+    };
   }
 
   @ApiOperation({ summary: 'List Folders' })

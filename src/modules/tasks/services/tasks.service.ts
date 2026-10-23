@@ -14,14 +14,15 @@ import {
 export class TasksService {
   constructor(private readonly tasksRepository: TasksRepository) {}
 
-  create(input: CreateTaskDto): Promise<Task> {
-    return this.tasksRepository.create(input);
+  create(input: CreateTaskDto, ownerUid: string): Promise<Task> {
+    return this.tasksRepository.create(input, ownerUid);
   }
 
   bulkCreate(
     inputs: BulkCreateTaskItemDto[],
+    ownerUid: string,
   ): Promise<Array<{ clientId?: string; resource: Task }>> {
-    return this.tasksRepository.bulkCreate(inputs);
+    return this.tasksRepository.bulkCreate(inputs, ownerUid);
   }
 
   findAll(

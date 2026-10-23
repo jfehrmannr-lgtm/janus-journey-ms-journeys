@@ -37,8 +37,8 @@ export class TasksRepository {
     private readonly connection: Connection,
   ) {}
 
-  async create(input: CreateTaskDto): Promise<Task> {
-    await this.validateParent(input.parent);
+  async create(input: CreateTaskDto, ownerUid: string): Promise<Task> {
+    await this.validateParent(input.parent, ownerUid);
 
     try {
       const task = await this.taskModel.create({
@@ -47,6 +47,7 @@ export class TasksRepository {
         metadata: input.metadata ?? {},
         name: input.name,
         orderIndex: input.orderIndex,
+        ownerUid,
         parent: input.parent,
         state: input.state,
         taskType: null,
@@ -63,6 +64,7 @@ export class TasksRepository {
 
   async bulkCreate(
     inputs: BulkCreateTaskItemDto[],
+    ownerUid: string,
   ): Promise<Array<{ clientId?: string; resource: Task }>> {
     this.validateClientIds(inputs);
 
@@ -77,6 +79,21 @@ export class TasksRepository {
       throw new BadRequestException(
         `Bulk Task items must use Journey, Folder, or User parents: ${invalidParentItems
           .map((input) => input.clientId ?? '<unassigned>')
+          .join(', ')}`,
+      );
+    }
+
+    const foreignUserParentItems = inputs.filter(
+      (input) => input.parent.type === 'user' && input.parent.uid !== ownerUid,
+    );
+
+    if (foreignUserParentItems.length > 0) {
+      throw new NotFoundException(
+        `User parents were not found for bulk Task items: ${foreignUserParentItems
+          .map(
+            (input) =>
+              `${input.clientId ?? '<unassigned>'} (${input.parent.uid})`,
+          )
           .join(', ')}`,
       );
     }
@@ -99,14 +116,22 @@ export class TasksRepository {
       journeyUids.length === 0
         ? Promise.resolve([] as Array<{ uid: string }>)
         : this.journeyModel
-            .find({ uid: { $in: journeyUids }, type: 'journey' })
+            .find({
+              uid: { $in: journeyUids },
+              type: 'journey',
+              ownerUid,
+            })
             .select({ uid: 1 })
             .lean<{ uid: string }[]>()
             .exec(),
       folderUids.length === 0
         ? Promise.resolve([] as Array<{ uid: string }>)
         : this.folderModel
-            .find({ uid: { $in: folderUids }, type: 'folder' })
+            .find({
+              uid: { $in: folderUids },
+              type: 'folder',
+              ownerUid,
+            })
             .select({ uid: 1 })
             .lean<{ uid: string }[]>()
             .exec(),
@@ -139,6 +164,7 @@ export class TasksRepository {
         metadata: input.metadata ?? {},
         name: input.name,
         orderIndex: input.orderIndex,
+        ownerUid,
         parent: input.parent,
         state: input.state,
         taskType: null,
@@ -359,12 +385,24 @@ export class TasksRepository {
     }
   }
 
-  private async validateParent(parent: ParentReference): Promise<void> {
-    if (parent.type === 'user') return;
+  private async validateParent(
+    parent: ParentReference,
+    ownerUid?: string,
+  ): Promise<void> {
+    if (parent.type === 'user') {
+      if (ownerUid !== undefined && parent.uid !== ownerUid) {
+        throw new NotFoundException(`User ${parent.uid} was not found`);
+      }
+      return;
+    }
 
     if (parent.type === 'journey') {
       const journey = await this.journeyModel
-        .findOne({ uid: parent.uid, type: 'journey' })
+        .findOne({
+          uid: parent.uid,
+          type: 'journey',
+          ...(ownerUid === undefined ? {} : { ownerUid }),
+        })
         .select({ _id: 1 })
         .lean()
         .exec();
@@ -377,7 +415,11 @@ export class TasksRepository {
 
     if (parent.type === 'folder') {
       const folder = await this.folderModel
-        .findOne({ uid: parent.uid, type: 'folder' })
+        .findOne({
+          uid: parent.uid,
+          type: 'folder',
+          ...(ownerUid === undefined ? {} : { ownerUid }),
+        })
         .select({ _id: 1 })
         .lean()
         .exec();

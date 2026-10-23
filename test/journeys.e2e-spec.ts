@@ -98,6 +98,17 @@ describe('Journeys API (e2e)', () => {
       .expect(401);
   });
 
+  it('rejects client-supplied ownerUid on POST resources', async () => {
+    await authenticatedRequest()
+      .post('/journeys')
+      .send({
+        name: 'Client-owned Journey',
+        ownerUid: 'user-attacker',
+        parent: { type: 'user', uid: 'user-e2e' },
+      })
+      .expect(400);
+  });
+
   it.each([1, 50, 200, 201, 2000, 40000])(
     'accepts collection size=%i for all resources',
     async (size) => {

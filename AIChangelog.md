@@ -2,6 +2,16 @@
 
 ## 2026-10-23
 
+### #JANUS-MS-JOURNEYS-0028: Assign Ownership on POST Resources
+
+**Work**: Plan / Build / Validate; Added server-controlled ownership assignment and parent ownership checks to individual and bulk Journey, Folder, and Task creation.
+
+- Created resources now persist and return the authenticated `X-User-Id` as `ownerUid`; client-supplied ownership remains rejected by the existing request validation boundary.
+- User parents must match the authenticated identity, while Journey and Folder parents are resolved with owner-scoped queries and foreign or missing parents return 404.
+- Preserved parent hierarchy, response contracts, bulk correlation behavior, and all GET, PATCH, DELETE, guard, schema, and BFF behavior.
+
+## 2026-10-23
+
 ### #JANUS-MS-JOURNEYS-0027: Remove Duplicate Swagger User Header
 
 **Work**: Plan / Build / Validate; Removed the generated per-operation `x-user-id` header parameter from Swagger while retaining the existing security-scheme authorization flow.

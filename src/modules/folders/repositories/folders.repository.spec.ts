@@ -77,18 +77,24 @@ describe('FoldersRepository bulk creation', () => {
       {} as never,
     );
 
-    const result = await repository.bulkCreate([
-      {
-        clientId: 'folder-client-1',
-        name: 'Folder',
-        parent: { type: 'user', uid: 'user-1' },
-      },
-    ]);
+    const result = await repository.bulkCreate(
+      [
+        {
+          clientId: 'folder-client-1',
+          name: 'Folder',
+          parent: { type: 'user', uid: 'user-1' },
+        },
+      ],
+      'user-1',
+    );
 
     expect(folderModel.insertMany).toHaveBeenCalledTimes(1);
     expect(folderModel.insertMany.mock.calls[0][0][0]).not.toHaveProperty(
       'clientId',
     );
+    expect(folderModel.insertMany.mock.calls[0][0][0]).toMatchObject({
+      ownerUid: 'user-1',
+    });
     expect(result[0]).toMatchObject({
       clientId: 'folder-client-1',
       resource: { type: 'folder' },
@@ -111,13 +117,16 @@ describe('FoldersRepository bulk creation', () => {
     );
 
     await expect(
-      repository.bulkCreate([
-        {
-          clientId: 'folder-client-journey',
-          name: 'Journey Folder',
-          parent: { type: 'journey', uid: 'journey-1' },
-        },
-      ]),
+      repository.bulkCreate(
+        [
+          {
+            clientId: 'folder-client-journey',
+            name: 'Journey Folder',
+            parent: { type: 'journey', uid: 'journey-1' },
+          },
+        ],
+        'user-1',
+      ),
     ).resolves.toHaveLength(1);
   });
 
@@ -153,12 +162,15 @@ describe('FoldersRepository bulk creation', () => {
       {} as never,
     );
 
-    const [result] = await repository.bulkCreate([
-      {
-        name: 'Uncorrelated Folder',
-        parent: { type: 'user', uid: 'user-1' },
-      },
-    ]);
+    const [result] = await repository.bulkCreate(
+      [
+        {
+          name: 'Uncorrelated Folder',
+          parent: { type: 'user', uid: 'user-1' },
+        },
+      ],
+      'user-1',
+    );
 
     expect(result).not.toHaveProperty('clientId');
     expect(folderModel.insertMany.mock.calls[0][0][0]).not.toHaveProperty(

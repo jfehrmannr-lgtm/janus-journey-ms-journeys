@@ -33,14 +33,15 @@ export class JourneysRepository {
     private readonly connection: Connection,
   ) {}
 
-  async create(input: CreateJourneyDto): Promise<Journey> {
-    this.validateParent(input.parent);
+  async create(input: CreateJourneyDto, ownerUid: string): Promise<Journey> {
+    this.validateCreateParent(input.parent, ownerUid);
 
     try {
       const journey = await this.journeyModel.create({
         description: input.description ?? null,
         metadata: input.metadata ?? {},
         name: input.name,
+        ownerUid,
         parent: input.parent,
         type: 'journey',
         uid: `journey-${randomUUID()}`,
@@ -212,6 +213,17 @@ export class JourneysRepository {
   private validateParent(parent: ParentReference): void {
     if (parent.type !== 'user') {
       throw new BadRequestException('Journey parent must be a User');
+    }
+  }
+
+  private validateCreateParent(
+    parent: ParentReference,
+    ownerUid: string,
+  ): void {
+    this.validateParent(parent);
+
+    if (parent.uid !== ownerUid) {
+      throw new NotFoundException(`User ${parent.uid} was not found`);
     }
   }
 }
