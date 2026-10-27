@@ -1,5 +1,26 @@
 # AI Changelog
 
+## 2026-10-27
+
+### #JANUS-MS-JOURNEYS-0033: Standardize Journey Swagger Image Examples
+
+**Work**: Document / Validate; Standardized the Journey request and response Swagger examples to show `/janus_journey_backgrounds/mount-sunrise.png` across all Journey endpoints.
+
+## 2026-10-27
+
+### #JANUS-MS-JOURNEYS-0032: Require Journey Background Image Paths on Creation
+
+**Work**: Correct / Validate; Made `imgUrl` required on the Journey creation DTO so creation requests must provide a string image path while keeping response compatibility for legacy documents.
+
+## 2026-10-27
+
+### #JANUS-MS-JOURNEYS-0031: Persist Journey Background Image Paths
+
+**Work**: Plan / Build / Validate; Added the optional string `imgUrl` Journey contract across validation, MongoDB persistence, repository mappings, and Swagger responses while preserving documents created before the field existed.
+
+- Journey creation persists and returns `imgUrl` when supplied; the existing PATCH flow carries the same field.
+- Legacy documents without `imgUrl` remain valid and omit the field from mapped responses.
+
 ## 2026-10-23
 
 ### #JANUS-MS-JOURNEYS-0030: Authorize DELETE Resource Ownership

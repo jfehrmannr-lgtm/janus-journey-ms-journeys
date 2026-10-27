@@ -39,6 +39,7 @@ export class JourneysRepository {
     try {
       const journey = await this.journeyModel.create({
         description: input.description ?? null,
+        imgUrl: input.imgUrl,
         metadata: input.metadata ?? {},
         name: input.name,
         ownerUid,
@@ -115,6 +116,7 @@ export class JourneysRepository {
     }
     if (input.name !== undefined) update.name = input.name;
     if (input.description !== undefined) update.description = input.description;
+    if (input.imgUrl !== undefined) update.imgUrl = input.imgUrl;
     if (input.metadata !== undefined) update.metadata = input.metadata;
 
     if (Object.keys(update).length === 0) {
@@ -203,6 +205,7 @@ export class JourneysRepository {
     return {
       createdAt: document.createdAt,
       description: document.description ?? null,
+      imgUrl: document.imgUrl,
       metadata: document.metadata ?? {},
       name: document.name,
       ownerUid: document.ownerUid,

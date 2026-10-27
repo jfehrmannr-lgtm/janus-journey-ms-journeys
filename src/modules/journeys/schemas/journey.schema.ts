@@ -15,6 +15,9 @@ export class JourneySchema {
   @Prop({ default: null, type: String })
   description!: string | null;
 
+  @Prop({ required: true, type: String })
+  imgUrl!: string;
+
   @Prop({ default: {}, type: Object })
   metadata!: Record<string, unknown>;
 

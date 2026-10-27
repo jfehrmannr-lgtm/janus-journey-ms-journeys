@@ -38,6 +38,11 @@ export class JourneyResponseDto {
   })
   description!: string | null;
 
+  @ApiPropertyOptional({
+    example: '/janus_journey_backgrounds/mount-sunrise.png',
+  })
+  imgUrl?: string;
+
   @ApiProperty({ type: Object })
   metadata!: Record<string, unknown>;
 

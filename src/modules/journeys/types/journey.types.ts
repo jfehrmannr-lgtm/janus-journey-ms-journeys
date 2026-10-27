@@ -19,6 +19,7 @@ export interface Journey {
   parent: ParentReference;
   name: string;
   description: string | null;
+  imgUrl?: string;
   metadata: Record<string, unknown>;
   progress?: Progress;
   createdAt: Date;

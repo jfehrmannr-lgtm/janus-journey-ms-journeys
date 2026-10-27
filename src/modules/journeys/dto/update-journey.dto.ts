@@ -28,6 +28,13 @@ export class UpdateJourneyDto {
   @IsString()
   description?: string | null;
 
+  @ApiPropertyOptional({
+    example: '/janus_journey_backgrounds/mount-sunrise.png',
+  })
+  @IsOptional()
+  @IsString()
+  imgUrl?: string;
+
   @ApiPropertyOptional({ type: Object })
   @IsObject()
   @IsOptional()
