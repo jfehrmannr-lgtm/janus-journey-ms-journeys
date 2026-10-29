@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model } from 'mongoose';
@@ -23,6 +24,7 @@ import type { ParentReference } from '@common/parent-reference.js';
 import type { Task } from '@journeys/types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
 import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
+import { ActivityPropagationService } from '@common/activity-propagation.service.js';
 
 @Injectable()
 export class TasksRepository {
@@ -35,10 +37,16 @@ export class TasksRepository {
     private readonly folderModel: Model<FolderDocument>,
     @InjectConnection()
     private readonly connection: Connection,
+    @Optional()
+    private readonly activityPropagation?: ActivityPropagationService,
   ) {}
 
   async create(input: CreateTaskDto, ownerUid: string): Promise<Task> {
     await this.validateParent(input.parent, ownerUid);
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? await this.activityPropagation.resolveAncestors(input.parent, ownerUid)
+      : [];
 
     try {
       const task = await this.taskModel.create({
@@ -49,11 +57,20 @@ export class TasksRepository {
         orderIndex: input.orderIndex,
         ownerUid,
         parent: input.parent,
+        lastActivityAt: activityAt,
         state: input.state,
         taskType: null,
         type: 'task',
         uid: `task-${randomUUID()}`,
       });
+
+      if (this.activityPropagation) {
+        await this.activityPropagation.propagate(
+          ancestors,
+          ownerUid,
+          activityAt,
+        );
+      }
 
       return this.toTask(task);
     } catch (error: unknown) {
@@ -156,6 +173,24 @@ export class TasksRepository {
       );
     }
 
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? (
+          await Promise.all(
+            [
+              ...new Map(
+                inputs.map((input) => [
+                  `${input.parent.type}:${input.parent.uid}`,
+                  input.parent,
+                ]),
+              ).values(),
+            ].map((parent) =>
+              this.activityPropagation!.resolveAncestors(parent, ownerUid),
+            ),
+          )
+        ).flat()
+      : [];
+
     const prepared = inputs.map((input) => ({
       clientId: input.clientId,
       document: {
@@ -166,6 +201,7 @@ export class TasksRepository {
         orderIndex: input.orderIndex,
         ownerUid,
         parent: input.parent,
+        lastActivityAt: activityAt,
         state: input.state,
         taskType: null,
         type: 'task' as const,
@@ -181,6 +217,14 @@ export class TasksRepository {
       const documentsByUid = new Map(
         documents.map((document) => [document.uid, document]),
       );
+
+      if (this.activityPropagation) {
+        await this.activityPropagation.propagate(
+          ancestors,
+          ownerUid,
+          activityAt,
+        );
+      }
 
       return prepared.map((item) => {
         const document = documentsByUid.get(item.document.uid);
@@ -296,10 +340,20 @@ export class TasksRepository {
       return current;
     }
 
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? await this.activityPropagation.resolveAncestors(
+          input.parent ?? current.parent,
+          ownerUid,
+        )
+      : [];
+
     const document = await this.taskModel
       .findOneAndUpdate(
         { uid, ownerUid },
-        { $set: update },
+        this.activityPropagation
+          ? { $set: update, $max: { lastActivityAt: activityAt } }
+          : { $set: update },
         {
           returnDocument: 'after',
           runValidators: true,
@@ -312,10 +366,39 @@ export class TasksRepository {
       throw new NotFoundException(`Task ${uid} was not found`);
     }
 
+    if (this.activityPropagation) {
+      await this.activityPropagation.propagate(ancestors, ownerUid, activityAt);
+    }
+
     return this.toTask(document);
   }
 
   async remove(uid: string, ownerUid: string): Promise<void> {
+    if (this.activityPropagation) {
+      const task = await this.taskModel
+        .findOne({ uid, ownerUid })
+        .select({ parent: 1 })
+        .lean<{ parent: ParentReference }>()
+        .exec();
+
+      if (!task) {
+        throw new NotFoundException(`Task ${uid} was not found`);
+      }
+
+      const ancestors = await this.activityPropagation.resolveAncestors(
+        task.parent,
+        ownerUid,
+      );
+      const result = await this.taskModel.deleteOne({ uid, ownerUid }).exec();
+
+      if (result.deletedCount === 0) {
+        throw new NotFoundException(`Task ${uid} was not found`);
+      }
+
+      await this.activityPropagation.propagate(ancestors, ownerUid, new Date());
+      return;
+    }
+
     const result = await this.taskModel.deleteOne({ uid, ownerUid }).exec();
 
     if (result.deletedCount === 0) {
@@ -331,8 +414,14 @@ export class TasksRepository {
         const tasks = await this.taskModel
           .find({ uid: { $in: ids }, type: 'task' })
           .session(session)
-          .select({ _id: 0, uid: 1, ownerUid: 1 })
-          .lean<Array<{ uid: string; ownerUid: string }>>()
+          .select({ _id: 0, uid: 1, ownerUid: 1, parent: 1 })
+          .lean<
+            Array<{
+              uid: string;
+              ownerUid: string;
+              parent: ParentReference;
+            }>
+          >()
           .exec();
         const foreignTasks = tasks.filter((task) => task.ownerUid !== ownerUid);
 
@@ -344,6 +433,27 @@ export class TasksRepository {
 
         if (tasks.length === 0) return;
 
+        const ancestors = this.activityPropagation
+          ? (
+              await Promise.all(
+                [
+                  ...new Map(
+                    tasks.map((task) => [
+                      `${task.parent.type}:${task.parent.uid}`,
+                      task.parent,
+                    ]),
+                  ).values(),
+                ].map((parent) =>
+                  this.activityPropagation!.resolveAncestors(
+                    parent,
+                    ownerUid,
+                    session,
+                  ),
+                ),
+              )
+            ).flat()
+          : [];
+
         await this.taskModel
           .deleteMany({
             uid: { $in: tasks.map((task) => task.uid) },
@@ -352,6 +462,15 @@ export class TasksRepository {
           })
           .session(session)
           .exec();
+
+        if (this.activityPropagation) {
+          await this.activityPropagation.propagate(
+            ancestors,
+            ownerUid,
+            new Date(),
+            session,
+          );
+        }
       });
     } finally {
       await session.endSession();
@@ -368,6 +487,7 @@ export class TasksRepository {
       orderIndex: document.orderIndex,
       ownerUid: document.ownerUid,
       parent: document.parent,
+      lastActivityAt: document.lastActivityAt ?? document.createdAt,
       state: document.state,
       taskType: null,
       type: 'task',

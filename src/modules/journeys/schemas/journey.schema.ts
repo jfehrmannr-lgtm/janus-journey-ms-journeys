@@ -35,6 +35,9 @@ export class JourneySchema {
   @Prop({ default: 'journey', enum: ['journey'], required: true, type: String })
   type!: 'journey';
 
+  @Prop({ default: Date.now, required: true, type: Date })
+  lastActivityAt!: Date;
+
   createdAt!: Date;
 
   updatedAt!: Date;

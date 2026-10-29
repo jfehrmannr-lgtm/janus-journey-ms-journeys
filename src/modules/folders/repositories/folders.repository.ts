@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model } from 'mongoose';
@@ -20,6 +21,7 @@ import type { ParentReference } from '@common/parent-reference.js';
 import type { Folder } from '@journeys/types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
 import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
+import { ActivityPropagationService } from '@common/activity-propagation.service.js';
 
 @Injectable()
 export class FoldersRepository {
@@ -32,10 +34,16 @@ export class FoldersRepository {
     private readonly journeyModel: Model<JourneyDocument>,
     @InjectConnection()
     private readonly connection: Connection,
+    @Optional()
+    private readonly activityPropagation?: ActivityPropagationService,
   ) {}
 
   async create(input: CreateFolderDto, ownerUid: string): Promise<Folder> {
     await this.validateParent(input.parent, ownerUid);
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? await this.activityPropagation.resolveAncestors(input.parent, ownerUid)
+      : [];
 
     try {
       const folder = await this.folderModel.create({
@@ -45,9 +53,18 @@ export class FoldersRepository {
         orderIndex: input.orderIndex,
         ownerUid,
         parent: input.parent,
+        lastActivityAt: activityAt,
         type: 'folder',
         uid: `folder-${randomUUID()}`,
       });
+
+      if (this.activityPropagation) {
+        await this.activityPropagation.propagate(
+          ancestors,
+          ownerUid,
+          activityAt,
+        );
+      }
 
       return this.toFolder(folder);
     } catch (error: unknown) {
@@ -64,12 +81,14 @@ export class FoldersRepository {
 
     const invalidParentItems = inputs.filter(
       (input) =>
-        input.parent.type !== 'user' && input.parent.type !== 'journey',
+        input.parent.type !== 'user' &&
+        input.parent.type !== 'journey' &&
+        input.parent.type !== 'folder',
     );
 
     if (invalidParentItems.length > 0) {
       throw new BadRequestException(
-        `Folder parent must be a User or Journey: ${invalidParentItems
+        `Folder parent must be a User, Journey, or Folder: ${invalidParentItems
           .map((input) => input.clientId ?? '<unassigned>')
           .join(', ')}`,
       );
@@ -97,10 +116,17 @@ export class FoldersRepository {
           .map((input) => input.parent.uid),
       ),
     ];
-    const journeys =
+    const folderUids = [
+      ...new Set(
+        inputs
+          .filter((input) => input.parent.type === 'folder')
+          .map((input) => input.parent.uid),
+      ),
+    ];
+    const [journeys, folders] = await Promise.all([
       journeyUids.length === 0
-        ? []
-        : await this.journeyModel
+        ? Promise.resolve([] as Array<{ uid: string }>)
+        : this.journeyModel
             .find({
               uid: { $in: journeyUids },
               type: 'journey',
@@ -108,17 +134,31 @@ export class FoldersRepository {
             })
             .select({ uid: 1 })
             .lean<{ uid: string }[]>()
-            .exec();
+            .exec(),
+      folderUids.length === 0
+        ? Promise.resolve([] as Array<{ uid: string }>)
+        : this.folderModel
+            .find({
+              uid: { $in: folderUids },
+              type: 'folder',
+              ownerUid,
+            })
+            .select({ uid: 1 })
+            .lean<{ uid: string }[]>()
+            .exec(),
+    ]);
     const existingJourneyUids = new Set(journeys.map((journey) => journey.uid));
-    const missingParentItems = inputs.filter(
-      (input) =>
-        input.parent.type === 'journey' &&
-        !existingJourneyUids.has(input.parent.uid),
+    const existingFolderUids = new Set(folders.map((folder) => folder.uid));
+    const missingParentItems = inputs.filter((input) =>
+      input.parent.type === 'journey'
+        ? !existingJourneyUids.has(input.parent.uid)
+        : input.parent.type === 'folder' &&
+          !existingFolderUids.has(input.parent.uid),
     );
 
     if (missingParentItems.length > 0) {
       throw new NotFoundException(
-        `Journey parents were not found for bulk Folder items: ${missingParentItems
+        `Folder parents were not found for bulk Folder items: ${missingParentItems
           .map(
             (input) =>
               `${input.clientId ?? '<unassigned>'} (${input.parent.uid})`,
@@ -126,6 +166,24 @@ export class FoldersRepository {
           .join(', ')}`,
       );
     }
+
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? (
+          await Promise.all(
+            [
+              ...new Map(
+                inputs.map((input) => [
+                  `${input.parent.type}:${input.parent.uid}`,
+                  input.parent,
+                ]),
+              ).values(),
+            ].map((parent) =>
+              this.activityPropagation!.resolveAncestors(parent, ownerUid),
+            ),
+          )
+        ).flat()
+      : [];
 
     const prepared = inputs.map((input) => ({
       clientId: input.clientId,
@@ -136,6 +194,7 @@ export class FoldersRepository {
         orderIndex: input.orderIndex,
         ownerUid,
         parent: input.parent,
+        lastActivityAt: activityAt,
         type: 'folder' as const,
         uid: `folder-${randomUUID()}`,
       },
@@ -149,6 +208,14 @@ export class FoldersRepository {
       const documentsByUid = new Map(
         documents.map((document) => [document.uid, document]),
       );
+
+      if (this.activityPropagation) {
+        await this.activityPropagation.propagate(
+          ancestors,
+          ownerUid,
+          activityAt,
+        );
+      }
 
       return prepared.map((item) => {
         const document = documentsByUid.get(item.document.uid);
@@ -279,10 +346,20 @@ export class FoldersRepository {
       return current;
     }
 
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? await this.activityPropagation.resolveAncestors(
+          input.parent ?? current.parent,
+          ownerUid,
+        )
+      : [];
+
     const document = await this.folderModel
       .findOneAndUpdate(
         { uid, ownerUid },
-        { $set: update },
+        this.activityPropagation
+          ? { $set: update, $max: { lastActivityAt: activityAt } }
+          : { $set: update },
         {
           returnDocument: 'after',
           runValidators: true,
@@ -293,6 +370,10 @@ export class FoldersRepository {
 
     if (!document) {
       throw new NotFoundException(`Folder ${uid} was not found`);
+    }
+
+    if (this.activityPropagation) {
+      await this.activityPropagation.propagate(ancestors, ownerUid, activityAt);
     }
 
     return this.toFolder(document);
@@ -306,13 +387,22 @@ export class FoldersRepository {
         const folder = await this.folderModel
           .findOne({ uid, type: 'folder', ownerUid })
           .session(session)
-          .select({ _id: 1 })
+          .select({ _id: 1, parent: 1 })
           .lean()
           .exec();
 
         if (!folder) {
           throw new NotFoundException(`Folder ${uid} was not found`);
         }
+
+        const ancestors =
+          this.activityPropagation && folder.parent
+            ? await this.activityPropagation.resolveAncestors(
+                folder.parent,
+                ownerUid,
+                session,
+              )
+            : [];
 
         await this.taskModel
           .deleteMany({
@@ -326,6 +416,15 @@ export class FoldersRepository {
           .deleteOne({ uid, ownerUid })
           .session(session)
           .exec();
+
+        if (this.activityPropagation) {
+          await this.activityPropagation.propagate(
+            ancestors,
+            ownerUid,
+            new Date(),
+            session,
+          );
+        }
       });
     } finally {
       await session.endSession();
@@ -340,8 +439,14 @@ export class FoldersRepository {
         const folders = await this.folderModel
           .find({ uid: { $in: ids }, type: 'folder' })
           .session(session)
-          .select({ _id: 0, uid: 1, ownerUid: 1 })
-          .lean<Array<{ uid: string; ownerUid: string }>>()
+          .select({ _id: 0, uid: 1, ownerUid: 1, parent: 1 })
+          .lean<
+            Array<{
+              uid: string;
+              ownerUid: string;
+              parent: ParentReference;
+            }>
+          >()
           .exec();
         const foreignFolders = folders.filter(
           (folder) => folder.ownerUid !== ownerUid,
@@ -356,6 +461,27 @@ export class FoldersRepository {
         const folderUids = folders.map((folder) => folder.uid);
 
         if (folderUids.length === 0) return;
+
+        const ancestors = this.activityPropagation
+          ? (
+              await Promise.all(
+                [
+                  ...new Map(
+                    folders.map((folder) => [
+                      `${folder.parent.type}:${folder.parent.uid}`,
+                      folder.parent,
+                    ]),
+                  ).values(),
+                ].map((parent) =>
+                  this.activityPropagation!.resolveAncestors(
+                    parent,
+                    ownerUid,
+                    session,
+                  ),
+                ),
+              )
+            ).flat()
+          : [];
 
         await this.taskModel
           .deleteMany({
@@ -373,6 +499,15 @@ export class FoldersRepository {
           })
           .session(session)
           .exec();
+
+        if (this.activityPropagation) {
+          await this.activityPropagation.propagate(
+            ancestors,
+            ownerUid,
+            new Date(),
+            session,
+          );
+        }
       });
     } finally {
       await session.endSession();
@@ -388,6 +523,7 @@ export class FoldersRepository {
       orderIndex: document.orderIndex,
       ownerUid: document.ownerUid,
       parent: document.parent,
+      lastActivityAt: document.lastActivityAt ?? document.createdAt,
       type: 'folder',
       uid: document.uid,
       updatedAt: document.updatedAt,
@@ -440,22 +576,37 @@ export class FoldersRepository {
       return;
     }
 
-    if (parent.type !== 'journey') {
-      throw new BadRequestException('Folder parent must be a User or Journey');
+    if (parent.type !== 'journey' && parent.type !== 'folder') {
+      throw new BadRequestException(
+        'Folder parent must be a User, Journey, or Folder',
+      );
     }
 
-    const journey = await this.journeyModel
-      .findOne({
-        uid: parent.uid,
-        type: 'journey',
-        ...(ownerUid === undefined ? {} : { ownerUid }),
-      })
-      .select({ _id: 1 })
-      .lean()
-      .exec();
+    const resource =
+      parent.type === 'journey'
+        ? await this.journeyModel
+            .findOne({
+              uid: parent.uid,
+              type: parent.type,
+              ...(ownerUid === undefined ? {} : { ownerUid }),
+            })
+            .select({ _id: 1 })
+            .lean()
+            .exec()
+        : await this.folderModel
+            .findOne({
+              uid: parent.uid,
+              type: parent.type,
+              ...(ownerUid === undefined ? {} : { ownerUid }),
+            })
+            .select({ _id: 1 })
+            .lean()
+            .exec();
 
-    if (!journey) {
-      throw new NotFoundException(`Journey ${parent.uid} was not found`);
+    if (!resource) {
+      throw new NotFoundException(
+        `${parent.type === 'journey' ? 'Journey' : 'Folder'} ${parent.uid} was not found`,
+      );
     }
   }
 }

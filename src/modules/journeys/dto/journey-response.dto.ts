@@ -54,4 +54,10 @@ export class JourneyResponseDto {
 
   @ApiProperty({ format: 'date-time' })
   updatedAt!: Date;
+
+  @ApiProperty({
+    example: '2026-10-29T12:00:00.000Z',
+    format: 'date-time',
+  })
+  lastActivityAt!: Date;
 }

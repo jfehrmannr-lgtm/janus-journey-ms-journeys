@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type Connection, type Model } from 'mongoose';
@@ -19,6 +20,7 @@ import type { ParentReference } from '@common/parent-reference.js';
 import type { Journey } from '../types/journey.types.js';
 import type { CollectionResult } from '@common/collection-result.js';
 import type { PaginationQueryDto } from '@common/pagination-query.dto.js';
+import { ActivityPropagationService } from '@common/activity-propagation.service.js';
 
 @Injectable()
 export class JourneysRepository {
@@ -31,10 +33,16 @@ export class JourneysRepository {
     private readonly taskModel: Model<TaskDocument>,
     @InjectConnection()
     private readonly connection: Connection,
+    @Optional()
+    private readonly activityPropagation?: ActivityPropagationService,
   ) {}
 
   async create(input: CreateJourneyDto, ownerUid: string): Promise<Journey> {
     this.validateCreateParent(input.parent, ownerUid);
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? await this.activityPropagation.resolveAncestors(input.parent, ownerUid)
+      : [];
 
     try {
       const journey = await this.journeyModel.create({
@@ -44,9 +52,18 @@ export class JourneysRepository {
         name: input.name,
         ownerUid,
         parent: input.parent,
+        lastActivityAt: activityAt,
         type: 'journey',
         uid: `journey-${randomUUID()}`,
       });
+
+      if (this.activityPropagation) {
+        await this.activityPropagation.propagate(
+          ancestors,
+          ownerUid,
+          activityAt,
+        );
+      }
 
       return this.toJourney(journey);
     } catch (error: unknown) {
@@ -123,10 +140,20 @@ export class JourneysRepository {
       return current;
     }
 
+    const activityAt = new Date();
+    const ancestors = this.activityPropagation
+      ? await this.activityPropagation.resolveAncestors(
+          input.parent ?? current.parent,
+          ownerUid,
+        )
+      : [];
+
     const document = await this.journeyModel
       .findOneAndUpdate(
         { uid, ownerUid },
-        { $set: update },
+        this.activityPropagation
+          ? { $set: update, $max: { lastActivityAt: activityAt } }
+          : { $set: update },
         {
           returnDocument: 'after',
           runValidators: true,
@@ -137,6 +164,10 @@ export class JourneysRepository {
 
     if (!document) {
       throw new NotFoundException(`Journey ${uid} was not found`);
+    }
+
+    if (this.activityPropagation) {
+      await this.activityPropagation.propagate(ancestors, ownerUid, activityAt);
     }
 
     return this.toJourney(document);
@@ -210,6 +241,7 @@ export class JourneysRepository {
       name: document.name,
       ownerUid: document.ownerUid,
       parent: document.parent,
+      lastActivityAt: document.lastActivityAt ?? document.createdAt,
       type: 'journey',
       uid: document.uid,
       updatedAt: document.updatedAt,

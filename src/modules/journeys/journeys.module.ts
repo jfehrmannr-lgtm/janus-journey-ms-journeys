@@ -15,6 +15,7 @@ import {
   TaskSchemaDefinition,
 } from '../tasks/schemas/task.schema.js';
 import { JourneysService } from './services/journeys.service.js';
+import { ActivityPropagationService } from '@common/activity-propagation.service.js';
 
 @Module({
   controllers: [JourneysController],
@@ -26,6 +27,6 @@ import { JourneysService } from './services/journeys.service.js';
     ]),
   ],
   exports: [JourneysRepository],
-  providers: [JourneysRepository, JourneysService],
+  providers: [ActivityPropagationService, JourneysRepository, JourneysService],
 })
 export class JourneysModule {}

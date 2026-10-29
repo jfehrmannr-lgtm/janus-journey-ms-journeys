@@ -169,7 +169,7 @@ describe('PATCH ownership repository behavior', () => {
     await expect(
       repository.update(
         'folder-1',
-        { parent: { type: 'folder', uid: 'folder-2' } },
+        { parent: { type: 'task' as never, uid: 'task-2' } },
         'user-a',
       ),
     ).rejects.toBeInstanceOf(BadRequestException);

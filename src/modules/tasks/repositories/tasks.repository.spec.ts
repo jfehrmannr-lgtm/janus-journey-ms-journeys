@@ -195,6 +195,48 @@ describe('TasksRepository bulk deletion', () => {
     expect(session.endSession).toHaveBeenCalledTimes(1);
   });
 
+  it('resolves each shared Task parent hierarchy once', async () => {
+    const session = createSession();
+    const parent = { type: 'folder' as const, uid: 'folder-1' };
+    const taskModel = {
+      find: jest.fn(() =>
+        query([
+          { ownerUid: 'user-1', parent, uid: 'task-1' },
+          { ownerUid: 'user-1', parent, uid: 'task-2' },
+        ]),
+      ),
+      deleteMany: jest.fn(() => query({ deletedCount: 2 })),
+    };
+    const activityPropagation = {
+      propagate: jest.fn(),
+      resolveAncestors: jest
+        .fn()
+        .mockResolvedValue([{ type: 'folder', uid: 'folder-1' }]),
+    };
+    const repository = new TasksRepository(
+      taskModel as never,
+      {} as never,
+      {} as never,
+      { startSession: jest.fn().mockResolvedValue(session) } as never,
+      activityPropagation as never,
+    );
+
+    await repository.deleteBulk(['task-1', 'task-2'], 'user-1');
+
+    expect(activityPropagation.resolveAncestors).toHaveBeenCalledTimes(1);
+    expect(activityPropagation.resolveAncestors).toHaveBeenCalledWith(
+      parent,
+      'user-1',
+      session,
+    );
+    expect(activityPropagation.propagate).toHaveBeenCalledWith(
+      [{ type: 'folder', uid: 'folder-1' }],
+      'user-1',
+      expect.any(Date),
+      session,
+    );
+  });
+
   it('propagates deletion failures so the transaction can roll back', async () => {
     const session = createSession();
     const failure = new Error('delete failed');

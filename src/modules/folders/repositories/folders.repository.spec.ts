@@ -130,7 +130,33 @@ describe('FoldersRepository bulk creation', () => {
     ).resolves.toHaveLength(1);
   });
 
-  it('rejects Folder parents before insertion', async () => {
+  it('allows Folder parents when the parent Folder exists', async () => {
+    const folderModel = {
+      find: jest.fn(() => query([{ uid: 'folder-parent' }])),
+      insertMany: jest.fn((documents: Array<{ uid: string }>) => documents),
+    };
+    const repository = new FoldersRepository(
+      folderModel as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      repository.bulkCreate(
+        [
+          {
+            clientId: 'folder-client-nested',
+            name: 'Nested Folder',
+            parent: { type: 'folder', uid: 'folder-parent' },
+          },
+        ],
+        'user-1',
+      ),
+    ).resolves.toHaveLength(1);
+  });
+
+  it('rejects unsupported parents before insertion', async () => {
     const folderModel = { insertMany: jest.fn() };
     const repository = new FoldersRepository(
       folderModel as never,
@@ -144,10 +170,10 @@ describe('FoldersRepository bulk creation', () => {
         {
           clientId: 'folder-client-1',
           name: 'Folder',
-          parent: { type: 'folder', uid: 'folder-1' },
+          parent: { type: 'task' as never, uid: 'task-1' },
         },
       ]),
-    ).rejects.toThrow('Folder parent must be a User or Journey');
+    ).rejects.toThrow('Folder parent must be a User, Journey, or Folder');
     expect(folderModel.insertMany).not.toHaveBeenCalled();
   });
 

@@ -5,6 +5,12 @@ export type EntityType = 'journey' | 'folder' | 'task';
 export type TaskState =
   'pending' | 'in-progress' | 'completed' | 'in-pause' | 'discarded';
 
+export interface BaseResourceType {
+  createdAt: Date;
+  updatedAt: Date;
+  lastActivityAt: Date;
+}
+
 export interface Progress {
   completed: number;
   discarded: number;
@@ -12,7 +18,7 @@ export interface Progress {
   percentage: number;
 }
 
-export interface Journey {
+export interface Journey extends BaseResourceType {
   uid: string;
   ownerUid: string;
   type: 'journey';
@@ -22,11 +28,9 @@ export interface Journey {
   imgUrl?: string;
   metadata: Record<string, unknown>;
   progress?: Progress;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-export interface Folder {
+export interface Folder extends BaseResourceType {
   uid: string;
   ownerUid: string;
   type: 'folder';
@@ -36,11 +40,9 @@ export interface Folder {
   orderIndex: unknown;
   metadata: Record<string, unknown>;
   progress?: Progress;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
-export interface Task {
+export interface Task extends BaseResourceType {
   uid: string;
   ownerUid: string;
   type: 'task';
@@ -52,8 +54,6 @@ export interface Task {
   isVisible: boolean;
   orderIndex: unknown;
   metadata: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface FolderWithTasks extends Folder {

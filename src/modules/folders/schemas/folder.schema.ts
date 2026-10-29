@@ -35,6 +35,9 @@ export class FolderSchema {
   @Prop({ default: 'folder', enum: ['folder'], required: true, type: String })
   type!: 'folder';
 
+  @Prop({ default: Date.now, required: true, type: Date })
+  lastActivityAt!: Date;
+
   createdAt!: Date;
 
   updatedAt!: Date;

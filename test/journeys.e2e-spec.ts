@@ -383,7 +383,7 @@ describe('Journeys API (e2e)', () => {
       .post('/folders')
       .send({
         name: 'Invalid Folder parent',
-        parent: { type: 'folder', uid: 'folder-parent' },
+        parent: { type: 'task', uid: 'task-parent' },
       })
       .expect(400);
     await authenticatedRequest()

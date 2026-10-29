@@ -2,6 +2,33 @@
 
 ## 2026-10-29
 
+### #JANUS-MS-JOURNEYS-0039: Deduplicate Bulk Folder Delete Ancestors
+
+**Work**: Optimize / Validate; Reused the bulk creation parent deduplication strategy in `FoldersRepository.deleteBulk()` so shared and nested Folder parent hierarchies resolve once per transaction.
+
+- Preserved ownership checks, cascade deletion behavior, transaction sessions, and propagation to surviving ancestors.
+
+### #JANUS-MS-JOURNEYS-0038: Deduplicate Bulk Task Delete Ancestors
+
+**Work**: Optimize / Validate; Reused bulk creation's unique-parent strategy in `TasksRepository.deleteBulk()` so shared Task parents are resolved once while retaining the transaction session through resolution, deletion, and propagation.
+
+- Preserved ownership checks, deletion behavior, and activity propagation for every affected ancestor.
+
+### #JANUS-MS-JOURNEYS-0037: Propagate Hierarchical Resource Activity
+
+**Work**: Plan / Build / Validate; Added upward-only `lastActivityAt` propagation for successful Journey, Folder, and Task creation, updates, and deletion while preserving ownership, cascade, and timestamp behavior.
+
+- Added shared ancestor resolution and monotonic `$max` updates for direct and nested Folder relationships, with ancestor `updatedAt` timestamps disabled during propagation.
+- Integrated propagation into individual and bulk mutation paths and resolved deletion ancestors before removing resources; sibling, descendant, and unrelated resources remain untouched.
+- Enabled the existing Folder parent relationship for nested Folder creation and updates without changing request or response shapes.
+
+### #JANUS-MS-JOURNEYS-0036: Add Resource Activity Timestamps
+
+**Work**: Plan / Build / Validate; Added server-managed `lastActivityAt` timestamps to Journey, Folder, and Task persistence and response contracts without implementing activity propagation.
+
+- Required new resources initialize `lastActivityAt` at creation and preserve existing `createdAt` / `updatedAt` timestamp behavior.
+- Added the field to the shared resource type and all resource response Swagger schemas while keeping it out of create and update DTOs so client attempts remain rejected by the existing validation boundary.
+
 ### #JANUS-MS-JOURNEYS-0035: Calculate Progress Per Returned Folder
 
 **Work**: Plan / Build / Validate; Calculated each Folder's progress independently from its direct Tasks and all descendant Folder Tasks while reusing the endpoint's existing relationship data and preserving Journey progress behavior.

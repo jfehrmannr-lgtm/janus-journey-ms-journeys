@@ -12,6 +12,7 @@ import {
   FolderSchema,
   FolderSchemaDefinition,
 } from '../folders/schemas/folder.schema.js';
+import { ActivityPropagationService } from '@common/activity-propagation.service.js';
 
 @Module({
   controllers: [TasksController],
@@ -23,6 +24,6 @@ import {
     ]),
   ],
   exports: [TasksRepository],
-  providers: [TasksRepository, TasksService],
+  providers: [ActivityPropagationService, TasksRepository, TasksService],
 })
 export class TasksModule {}

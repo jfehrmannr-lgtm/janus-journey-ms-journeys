@@ -15,6 +15,7 @@ import {
   JourneySchemaDefinition,
 } from '../journeys/schemas/journey.schema.js';
 import { FoldersService } from './services/folders.service.js';
+import { ActivityPropagationService } from '@common/activity-propagation.service.js';
 
 @Module({
   controllers: [FoldersController],
@@ -26,6 +27,6 @@ import { FoldersService } from './services/folders.service.js';
     ]),
   ],
   exports: [FoldersRepository],
-  providers: [FoldersRepository, FoldersService],
+  providers: [ActivityPropagationService, FoldersRepository, FoldersService],
 })
 export class FoldersModule {}

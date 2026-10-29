@@ -24,10 +24,11 @@ export class BulkCreateFolderItemDto extends CreateFolderDto {
 
   @ApiProperty({
     description:
-      'The Folder parent. Valid examples are { uid: "user-123", type: "user" } and { uid: "journey-123", type: "journey" }.',
+      'The Folder parent. Valid examples are { uid: "user-123", type: "user" }, { uid: "journey-123", type: "journey" }, and { uid: "folder-123", type: "folder" }.',
     examples: [
       { uid: 'user-123', type: 'user' },
       { uid: 'journey-123', type: 'journey' },
+      { uid: 'folder-123', type: 'folder' },
     ],
     type: ParentReferenceDto,
   })

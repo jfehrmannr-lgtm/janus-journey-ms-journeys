@@ -49,6 +49,9 @@ export class TaskSchema {
   @Prop({ default: 'task', enum: ['task'], required: true, type: String })
   type!: 'task';
 
+  @Prop({ default: Date.now, required: true, type: Date })
+  lastActivityAt!: Date;
+
   createdAt!: Date;
 
   updatedAt!: Date;
