@@ -180,11 +180,17 @@ export class UserRootService {
           ownerUid,
         ),
       );
+      const descendantFolders = await this.findDescendantFolders(
+        folders.map((folder) => ({ type: 'folder' as const, uid: folder.uid })),
+        ownerUid,
+      );
+
+      const progressFolders = [...folders, ...descendantFolders];
       const tasks = sortByOrderIndex(
         await this.tasksRepository.findByParentUids(
           [
             { type: 'journey', uid: params.resourceId },
-            ...folders.map((folder) => ({
+            ...progressFolders.map((folder) => ({
               type: 'folder' as const,
               uid: folder.uid,
             })),
@@ -200,12 +206,25 @@ export class UserRootService {
         folderTasks.push(task);
         tasksByFolderUid.set(task.parent.uid, folderTasks);
       }
+      const foldersByParent = this.groupFoldersByParent(progressFolders);
 
       return {
         items: {
           ...journey,
+          progress: calculateProgress(tasks),
           folders: folders.map((folder) => ({
             ...folder,
+            progress: calculateProgress(
+              [
+                ...getDescendantFolderUids(
+                  folder.uid,
+                  'folder',
+                  foldersByParent,
+                ),
+              ]
+                .flatMap((uid) => tasksByFolderUid.get(uid) ?? [])
+                .concat(tasksByFolderUid.get(folder.uid) ?? []),
+            ),
             tasks: tasksByFolderUid.get(folder.uid) ?? [],
           })),
           tasks: tasks.filter((task) => task.parent.type === 'journey'),
@@ -218,14 +237,35 @@ export class UserRootService {
         params.resourceId,
         ownerUid,
       );
-      const tasks = sortByOrderIndex(
+      const descendantFolders = await this.findDescendantFolders(
+        [{ type: 'folder', uid: params.resourceId }],
+        ownerUid,
+      );
+      const progressTasks = sortByOrderIndex(
         await this.tasksRepository.findByParentUids(
-          [{ type: 'folder', uid: params.resourceId }],
+          [
+            { type: 'folder', uid: params.resourceId },
+            ...descendantFolders.map((childFolder) => ({
+              type: 'folder' as const,
+              uid: childFolder.uid,
+            })),
+          ],
           ownerUid,
         ),
       );
+      const tasks = progressTasks.filter(
+        (task) =>
+          task.parent.type === 'folder' &&
+          task.parent.uid === params.resourceId,
+      );
 
-      return { items: { ...folder, tasks } };
+      return {
+        items: {
+          ...folder,
+          progress: calculateProgress(progressTasks),
+          tasks,
+        },
+      };
     }
 
     const task = await this.tasksRepository.findByUid(

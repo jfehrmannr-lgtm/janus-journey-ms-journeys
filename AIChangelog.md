@@ -1,5 +1,24 @@
 # AI Changelog
 
+## 2026-10-29
+
+### #JANUS-MS-JOURNEYS-0035: Calculate Progress Per Returned Folder
+
+**Work**: Plan / Build / Validate; Calculated each Folder's progress independently from its direct Tasks and all descendant Folder Tasks while reusing the endpoint's existing relationship data and preserving Journey progress behavior.
+
+- Added descendant-aware Folder progress to Journey resource responses.
+- Preserved direct Task response contents, ordering, visibility handling, and empty Folder progress.
+
+## 2026-10-28
+
+### #JANUS-MS-JOURNEYS-0034: Calculate Complete Resource Progress
+
+**Work**: Plan / Build; Added shared visibility- and state-aware progress calculation to Journey and Folder resource retrieval responses.
+
+- Reused `calculateProgress` for `GET /users/resources/:resourceType/:resourceId`.
+- Preserved the existing nested resource structure and response contract.
+- Added coverage for visible, hidden, completed, discarded, and pending Tasks.
+
 ## 2026-10-27
 
 ### #JANUS-MS-JOURNEYS-0033: Standardize Journey Swagger Image Examples
