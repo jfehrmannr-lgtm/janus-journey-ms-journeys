@@ -4,8 +4,10 @@ import {
   ApiExtraModels,
   ApiOperation,
   ApiParam,
+  ApiNotFoundResponse,
   ApiResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import {
   ResourceParamsDto,
@@ -50,6 +52,13 @@ export class UserRootController {
   @ApiBadRequestResponse({
     description: 'The resource type or resource ID path parameter is invalid.',
   })
+  @ApiNotFoundResponse({
+    description:
+      'The requested resource does not exist for the authenticated User.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid internal authentication headers.',
+  })
   @Get('resources/:resourceType/:resourceId')
   findResource(
     @Param() params: ResourceParamsDto,
@@ -72,6 +81,9 @@ export class UserRootController {
   @ApiResponse({ status: 200, type: UserRootResponseDto })
   @ApiBadRequestResponse({
     description: 'The userId path parameter is invalid.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid internal authentication headers.',
   })
   @Get(':userId/root')
   findByUserId(

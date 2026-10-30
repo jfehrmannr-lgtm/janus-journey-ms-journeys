@@ -1,5 +1,15 @@
 # AI Changelog
 
+## 2026-10-30
+
+### #JANUS-MS-JOURNEYS-0040: Document User Resource Responses
+
+**Work**: Plan / Audit / Build / Validate; Aligned the `/users/resource` Swagger response documentation with the existing validation, authentication, ownership-scoped lookup, and response behavior.
+
+- Documented `401 Unauthorized` for both User Root endpoints.
+- Documented `404 Not Found` only for complete resource retrieval, where the existing owner-scoped repositories can raise it.
+- Preserved the existing `200` response DTOs, `400` validation responses, runtime behavior, and the path-parameter handling of User Root listing.
+
 ## 2026-10-29
 
 ### #JANUS-MS-JOURNEYS-0039: Deduplicate Bulk Folder Delete Ancestors
